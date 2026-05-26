@@ -51,6 +51,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "web:export": "expo export -p web",
+    "eas:android:preview": "eas build -p android --profile preview",
+    "eas:android:production": "eas build -p android --profile production",
     "lint": "expo lint",
     "db:generate": "drizzle-kit generate"
   },

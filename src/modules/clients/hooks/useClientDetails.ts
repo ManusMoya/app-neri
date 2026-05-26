@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
 
-import { getClientDetails, type ClientDetails } from "@/services/clients.service";
+import { getClientDetails, type ClientDetails } from "@/services/clients.api.service";
 
 export function useClientDetails(id: string) {
   const [details, setDetails] = useState<ClientDetails | null>(null);

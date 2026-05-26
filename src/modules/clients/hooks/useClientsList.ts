@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useFocusEffect } from "expo-router";
 
-import { listClients } from "@/services/clients.service";
+import { listClients } from "@/services/clients.api.service";
 
 export function useClientsList() {
   const [searchTerm, setSearchTerm] = useState("");

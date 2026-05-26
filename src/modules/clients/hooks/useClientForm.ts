@@ -7,7 +7,7 @@ import type { Client } from "@/database/schema";
 import {
   createClientFromForm,
   updateClientFromForm,
-} from "@/services/clients.service";
+} from "@/services/clients.api.service";
 
 import type { ClientFormValues } from "../types";
 import { clientFormSchema } from "../utils/validation";

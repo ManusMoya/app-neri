@@ -3,8 +3,17 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const pool = require("./db");
+const authRoutes = require("./routes/auth.routes");
 const clientsRoutes = require("./routes/clients.routes");
-const createNotImplementedRouter = require("./routes/not-implemented.routes");
+const categoriesRoutes = require("./routes/categories.routes");
+const providersRoutes = require("./routes/providers.routes");
+const productsRoutes = require("./routes/products.routes");
+const productVariantsRoutes = require("./routes/product-variants.routes");
+const ordersRoutes = require("./routes/orders.routes");
+const orderItemsRoutes = require("./routes/order-items.routes");
+const paymentsRoutes = require("./routes/payments.routes");
+const purchasesRoutes = require("./routes/purchases.routes");
+const purchaseItemsRoutes = require("./routes/purchase-items.routes");
 const { errorHandler, notFound } = require("./middleware/error.middleware");
 
 const app = express();
@@ -12,16 +21,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use("/auth", authRoutes);
 app.use("/clients", clientsRoutes);
-app.use("/categories", createNotImplementedRouter("categories"));
-app.use("/providers", createNotImplementedRouter("providers"));
-app.use("/products", createNotImplementedRouter("products"));
-app.use("/product-variants", createNotImplementedRouter("product_variants"));
-app.use("/orders", createNotImplementedRouter("orders"));
-app.use("/order-items", createNotImplementedRouter("order_items"));
-app.use("/payments", createNotImplementedRouter("payments"));
-app.use("/purchases", createNotImplementedRouter("purchases"));
-app.use("/purchase-items", createNotImplementedRouter("purchase_items"));
+app.use("/categories", categoriesRoutes);
+app.use("/providers", providersRoutes);
+app.use("/products", productsRoutes);
+app.use("/product-variants", productVariantsRoutes);
+app.use("/orders", ordersRoutes);
+app.use("/order-items", orderItemsRoutes);
+app.use("/payments", paymentsRoutes);
+app.use("/purchases", purchasesRoutes);
+app.use("/purchase-items", purchaseItemsRoutes);
 
 app.get("/", (req, res) => {
   res.json({
