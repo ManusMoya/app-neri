@@ -3,11 +3,25 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const pool = require("./db");
+const clientsRoutes = require("./routes/clients.routes");
+const createNotImplementedRouter = require("./routes/not-implemented.routes");
+const { errorHandler, notFound } = require("./middleware/error.middleware");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.use("/clients", clientsRoutes);
+app.use("/categories", createNotImplementedRouter("categories"));
+app.use("/providers", createNotImplementedRouter("providers"));
+app.use("/products", createNotImplementedRouter("products"));
+app.use("/product-variants", createNotImplementedRouter("product_variants"));
+app.use("/orders", createNotImplementedRouter("orders"));
+app.use("/order-items", createNotImplementedRouter("order_items"));
+app.use("/payments", createNotImplementedRouter("payments"));
+app.use("/purchases", createNotImplementedRouter("purchases"));
+app.use("/purchase-items", createNotImplementedRouter("purchase_items"));
 
 app.get("/", (req, res) => {
   res.json({
@@ -268,6 +282,9 @@ app.get("/create-transaction-tables", async (req, res) => {
     });
   }
 });
+
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
