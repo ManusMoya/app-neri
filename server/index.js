@@ -40,6 +40,20 @@ app.get("/", (req, res) => {
   });
 });
 
+app.get("/version", (req, res) => {
+  res.json({
+    status: "ok",
+    version: "routes-auth-clients-active",
+    commit: "b5b98d1-or-newer",
+    routes: [
+      "/auth/register",
+      "/auth/login",
+      "/auth/me",
+      "/clients"
+    ]
+  });
+});
+
 app.get("/db-test", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
