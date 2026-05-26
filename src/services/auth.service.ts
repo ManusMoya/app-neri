@@ -35,6 +35,10 @@ export function getCurrentUser() {
   return currentUser;
 }
 
+export function setCurrentUser(user: AuthUser | null) {
+  currentUser = user;
+}
+
 export function logoutUser() {
   currentUser = null;
 }

@@ -1,4 +1,5 @@
 import { apiRequest, setApiAuthToken } from "./api-client";
+import { setCurrentUser, type AuthUser } from "./auth.service";
 
 export type AuthApiUser = {
   id: string;
@@ -21,12 +22,22 @@ export function getCurrentApiSession() {
 export function logoutApiUser() {
   currentSession = null;
   setApiAuthToken(null);
+  setCurrentUser(null);
 }
 
 function setSession(session: AuthApiSession) {
   currentSession = session;
   setApiAuthToken(session.token);
+  setCurrentUser(mapApiUser(session.user));
   return session;
+}
+
+function mapApiUser(user: AuthApiUser): AuthUser {
+  return {
+    id: user.id,
+    username: user.username,
+    createdAt: new Date(Number(user.created_at)),
+  };
 }
 
 export async function register(username: string, password: string) {

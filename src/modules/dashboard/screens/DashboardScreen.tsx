@@ -3,7 +3,7 @@ import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 
 import { Button, Header, LoadingSpinner, Screen, ScreenBody } from "@/components/ui";
-import { logoutUser } from "@/services/auth.service";
+import { logoutApiUser as logoutUser } from "@/services/auth.api.service";
 
 import { MetricCard } from "../components/MetricCard";
 import { useDashboard } from "../hooks/useDashboard";

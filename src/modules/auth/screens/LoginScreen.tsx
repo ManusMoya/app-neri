@@ -9,7 +9,7 @@ import {
 import { useRouter, type Href } from "expo-router";
 
 import { Button, Card, Input, Screen } from "@/components/ui";
-import { createUser, loginUser } from "@/services/auth.service";
+import { login as loginUser, register as createUser } from "@/services/auth.api.service";
 
 type LoginErrors = {
   username?: string;

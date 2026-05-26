@@ -8,6 +8,10 @@ type ApiResponse<T> = {
 
 let authToken: string | null = null;
 
+function buildApiUrl(path: string) {
+  return new URL(path, API_BASE_URL).toString();
+}
+
 export function setApiAuthToken(token: string | null) {
   authToken = token;
 }
@@ -17,6 +21,7 @@ export function getApiAuthToken() {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit) {
+  const url = buildApiUrl(path);
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -25,13 +30,24 @@ export async function apiRequest<T>(path: string, init?: RequestInit) {
     headers.Authorization = `Bearer ${authToken}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(url, {
     ...init,
     headers: {
       ...headers,
       ...init?.headers,
     },
   });
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    const text = await response.text();
+    const preview = text.trim().slice(0, 120);
+    throw new Error(
+      `La API devolvio una respuesta que no es JSON para ${url}. ` +
+        `Estado ${response.status}. ${preview || "Respuesta vacia."}`,
+    );
+  }
+
   const body = await response.json() as ApiResponse<T>;
 
   if (!response.ok || body.status === "error") {
