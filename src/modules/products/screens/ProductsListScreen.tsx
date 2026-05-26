@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { FlatList, RefreshControl, Text, View } from "react-native";
-import { useRouter, type Href } from "expo-router";
+import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 
 import {
   Button,
@@ -23,6 +23,8 @@ const filters: { label: string; value: ProductStockFilter }[] = [
 
 export function ProductsListScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ providerId?: string | string[] }>();
+  const providerId = Array.isArray(params.providerId) ? params.providerId[0] : params.providerId;
   const {
     emptyTitle,
     error,
@@ -31,10 +33,13 @@ export function ProductsListScreen() {
     isRefreshing,
     products,
     refresh,
+    resetFilters,
     searchTerm,
     setFilter,
     setSearchTerm,
-  } = useProductsList();
+  } = useProductsList(providerId);
+  const hasProviderFilter = Boolean(providerId);
+  const hasActiveFilters = searchTerm.trim().length > 0 || filter !== "all" || hasProviderFilter;
 
   const openProduct = useCallback(
     (id: string) => {
@@ -50,11 +55,20 @@ export function ProductsListScreen() {
     [openProduct],
   );
 
+  const showAllProducts = useCallback(() => {
+    resetFilters();
+    router.replace("/products" as Href);
+  }, [resetFilters, router]);
+
   return (
     <Screen scroll={false}>
       <Header
         title="Productos"
-        subtitle="Catalogo, variantes y control de stock."
+        subtitle={
+          hasProviderFilter
+            ? "Productos filtrados por proveedor."
+            : "Catalogo, variantes y control de stock."
+        }
         rightSlot={
           <Button
             title="Nuevo"
@@ -85,6 +99,14 @@ export function ProductsListScreen() {
             />
           ))}
         </View>
+        {hasActiveFilters ? (
+          <Button
+            title="Ver todos los productos"
+            variant="ghost"
+            size="sm"
+            onPress={showAllProducts}
+          />
+        ) : null}
         {error ? <Text className="text-sm font-medium text-danger">{error}</Text> : null}
       </View>
 

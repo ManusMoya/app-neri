@@ -1,5 +1,5 @@
-import { Redirect } from "expo-router";
+import { LoginScreen } from "@/modules/auth";
 
 export default function HomePage() {
-  return <Redirect href="/dashboard" />;
+  return <LoginScreen />;
 }

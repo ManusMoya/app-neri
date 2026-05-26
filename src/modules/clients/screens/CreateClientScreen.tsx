@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import type { Href } from "expo-router";
 
 import { Button, Header, Screen, ScreenBody } from "@/components/ui";
 
@@ -15,7 +16,12 @@ export function CreateClientScreen() {
         title="Nuevo cliente"
         subtitle="Datos basicos para ventas, deuda y contacto."
         rightSlot={
-          <Button title="Cerrar" size="sm" variant="ghost" onPress={() => router.back()} />
+          <Button
+            title="Volver"
+            size="sm"
+            variant="outline"
+            onPress={() => router.replace("/clients" as Href)}
+          />
         }
       />
       <ScreenBody>

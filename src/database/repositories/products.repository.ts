@@ -40,25 +40,67 @@ export function getProducts(db: RepositoryDatabase = getDatabaseSync()): Product
 }
 
 export function getProductById(id: string, db: RepositoryDatabase = getDatabaseSync()) {
-  return db.query.products.findFirst({
-    where: eq(products.id, id),
-    with: {
-      variants: true,
-      category: true,
-      provider: true,
-    },
-  }).sync();
+  const rows = db
+    .select({
+      product: products,
+      variant: productVariants,
+      category: categories,
+      provider: providers,
+    })
+    .from(products)
+    .innerJoin(categories, eq(products.categoryId, categories.id))
+    .innerJoin(providers, eq(products.providerId, providers.id))
+    .leftJoin(productVariants, eq(products.id, productVariants.productId))
+    .where(eq(products.id, id))
+    .all();
+
+  if (rows.length === 0) return null;
+
+  const result = {
+    ...rows[0].product,
+    category: rows[0].category,
+    provider: rows[0].provider,
+    variants: rows
+      .map((r) => r.variant)
+      .filter((v): v is ProductVariant => v !== null && v.isActive),
+  };
+
+  return result;
 }
 
 export function getProductsWithDetails(db: RepositoryDatabase = getDatabaseSync()) {
-  return db.query.products.findMany({
-    orderBy: desc(products.createdAt),
-    with: {
-      variants: true,
-      category: true,
-      provider: true,
-    },
-  }).sync();
+  const rows = db
+    .select({
+      product: products,
+      variant: productVariants,
+      category: categories,
+      provider: providers,
+    })
+    .from(products)
+    .innerJoin(categories, eq(products.categoryId, categories.id))
+    .innerJoin(providers, eq(products.providerId, providers.id))
+    .leftJoin(productVariants, eq(products.id, productVariants.productId))
+    .orderBy(desc(products.createdAt))
+    .all();
+
+  const productMap = new Map<string, any>();
+
+  for (const row of rows) {
+    if (!productMap.has(row.product.id)) {
+      productMap.set(row.product.id, {
+        ...row.product,
+        category: row.category,
+        provider: row.provider,
+        variants: [],
+      });
+    }
+
+    if (row.variant && row.variant.isActive) {
+      productMap.get(row.product.id).variants.push(row.variant);
+    }
+  }
+
+  return Array.from(productMap.values());
 }
 
 export function getVariantsByProduct(

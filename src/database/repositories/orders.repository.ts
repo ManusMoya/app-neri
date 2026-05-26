@@ -18,19 +18,32 @@ export function createOrder(input: CreateOrderInput, db: RepositoryDatabase = ge
   return db.insert(orders).values(input).returning().get();
 }
 
-export function getOrderById(id: string, db: RepositoryDatabase = getDatabaseSync()) {
-  return db.query.orders.findFirst({
+export async function getOrderById(id: string, db: RepositoryDatabase = getDatabaseSync()) {
+  return await db.query.orders.findFirst({
     where: eq(orders.id, id),
     with: {
       client: true,
       items: true,
       payments: true,
     },
-  }).sync();
+  });
+}
+
+export async function getOrderByIdWithDetails(id: string, db: RepositoryDatabase = getDatabaseSync()) {
+  return await getOrderById(id, db);
 }
 
 export function getOrders(db: RepositoryDatabase = getDatabaseSync()): Order[] {
   return db.select().from(orders).orderBy(desc(orders.orderedAt)).all();
+}
+
+export async function getOrdersWithClient(db: RepositoryDatabase = getDatabaseSync()) {
+  return await db.query.orders.findMany({
+    with: {
+      client: true,
+    },
+    orderBy: desc(orders.orderedAt),
+  });
 }
 
 export function updateOrderStatus(

@@ -5,7 +5,7 @@ import { listProducts } from "@/services/products.service";
 
 import type { ProductStockFilter } from "../types";
 
-export function useProductsList() {
+export function useProductsList(providerId?: string) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<ProductStockFilter>("all");
   const [products, setProducts] = useState<Awaited<ReturnType<typeof listProducts>>>([]);
@@ -21,7 +21,7 @@ export function useProductsList() {
     }
 
     try {
-      const result = await listProducts(searchTerm, filter);
+      const result = await listProducts(searchTerm, filter, providerId);
       setProducts(result);
       setError(null);
     } catch (loadError) {
@@ -32,7 +32,7 @@ export function useProductsList() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [filter, searchTerm]);
+  }, [filter, searchTerm, providerId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -64,6 +64,10 @@ export function useProductsList() {
     isRefreshing,
     products,
     refresh: () => loadProducts(true),
+    resetFilters: () => {
+      setSearchTerm("");
+      setFilter("all");
+    },
     searchTerm,
     setFilter,
     setSearchTerm,

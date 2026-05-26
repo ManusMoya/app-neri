@@ -1,4 +1,5 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from "expo-router";
 
 import {
   Button,
@@ -8,6 +9,8 @@ import {
   Screen,
   ScreenBody,
 } from "@/components/ui";
+import type { Provider } from "@/database/schema";
+import { listProviders } from "@/services/providers.service";
 
 import { ProductForm } from "../components";
 import { useProductDetails, useProductForm } from "../hooks";
@@ -22,8 +25,39 @@ export function EditProductScreen() {
   const id = getIdParam(params.id) ?? "";
   const { isLoading, product } = useProductDetails(id);
   const formState = useProductForm({ mode: "edit", product });
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [isLoadingProviders, setIsLoadingProviders] = useState(true);
+  const goToProducts = () => router.replace("/products");
 
-  if (isLoading) {
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      async function loadProviders() {
+        setIsLoadingProviders(true);
+
+        try {
+          const result = await listProviders();
+
+          if (isActive) {
+            setProviders(result);
+          }
+        } finally {
+          if (isActive) {
+            setIsLoadingProviders(false);
+          }
+        }
+      }
+
+      void loadProviders();
+
+      return () => {
+        isActive = false;
+      };
+    }, []),
+  );
+
+  if (isLoading || isLoadingProviders) {
     return (
       <Screen scroll={false}>
         <LoadingSpinner className="flex-1" />
@@ -39,7 +73,7 @@ export function EditProductScreen() {
           title="Producto no encontrado"
           description="El producto no existe o fue eliminado."
           actionLabel="Volver"
-          onActionPress={() => router.back()}
+          onActionPress={() => router.replace("/products" as Href)}
         />
       </Screen>
     );
@@ -51,11 +85,20 @@ export function EditProductScreen() {
         title="Editar producto"
         subtitle={product.name}
         rightSlot={
-          <Button title="Cerrar" size="sm" variant="ghost" onPress={() => router.back()} />
+          <Button
+            title="Volver a productos"
+            size="sm"
+            variant="outline"
+            onPress={goToProducts}
+          />
         }
       />
       <ScreenBody>
-        <ProductForm formState={formState} submitLabel="Guardar cambios" />
+        <ProductForm
+          formState={formState}
+          providers={providers}
+          submitLabel="Guardar cambios"
+        />
       </ScreenBody>
     </Screen>
   );

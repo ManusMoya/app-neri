@@ -20,11 +20,6 @@ export const emptyVariantValues = {
   color: "",
   size: "",
   model: "",
-  sku: "",
-  barcode: "",
-  stock: 0,
-  reservedStock: 0,
-  minimumStock: 0,
   costPrice: 0,
   salePrice: 0,
 };
@@ -36,19 +31,12 @@ export function useProductForm({ mode, product }: UseProductFormOptions) {
   const defaultValues = useMemo<ProductFormValues>(
     () => ({
       name: product?.name ?? "",
-      categoryName: product?.category.name ?? "",
-      providerName: product?.provider.name ?? "",
-      description: product?.description ?? "",
+      providerId: product?.providerId ?? "",
       variants: product?.variants.filter((variant) => variant.isActive).map((variant) => ({
         id: variant.id,
         color: variant.color ?? "",
         size: variant.size ?? "",
         model: variant.model ?? "",
-        sku: variant.sku ?? "",
-        barcode: variant.barcode ?? "",
-        stock: variant.stock,
-        reservedStock: variant.reservedStock,
-        minimumStock: variant.minimumStock,
         costPrice: variant.costPrice,
         salePrice: variant.salePrice,
       })) ?? [emptyVariantValues],
@@ -74,7 +62,10 @@ export function useProductForm({ mode, product }: UseProductFormOptions) {
           ? await createProductFromForm(values)
           : await updateProductFromForm(product?.id ?? "", values);
 
-      router.replace(`/products/${savedProduct.id}` as Href);
+      router.replace({
+        pathname: "/products/[id]",
+        params: { id: savedProduct.id },
+      } as Href);
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "No se pudo guardar el producto.",

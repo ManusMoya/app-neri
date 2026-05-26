@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 
 import {
   Button,
@@ -39,7 +39,7 @@ export function EditClientScreen() {
           title="Cliente no encontrado"
           description="El cliente no existe o fue eliminado."
           actionLabel="Volver"
-          onActionPress={() => router.back()}
+          onActionPress={() => router.replace("/clients" as Href)}
         />
       </Screen>
     );
@@ -51,7 +51,12 @@ export function EditClientScreen() {
         title="Editar cliente"
         subtitle={details.client.name}
         rightSlot={
-          <Button title="Cerrar" size="sm" variant="ghost" onPress={() => router.back()} />
+          <Button
+            title="Volver"
+            size="sm"
+            variant="outline"
+            onPress={() => router.replace(`/clients/${details.client.id}` as Href)}
+          />
         }
       />
       <ScreenBody>

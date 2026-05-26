@@ -16,10 +16,6 @@ function getProductStatus(product: ProductListRecord) {
     return "out";
   }
 
-  if (product.variants.some((variant) => variant.isActive && variant.stock - variant.reservedStock <= variant.minimumStock)) {
-    return "low";
-  }
-
   return "normal";
 }
 
@@ -35,7 +31,7 @@ function ProductListItemComponent({ product, onPress }: ProductListItemProps) {
               {product.name}
             </Text>
             <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-              {product.category.name} · {product.provider.name}
+              {product.provider.name}
             </Text>
           </View>
           <Badge label={getStockStatusLabel(status)} tone={getStockStatusTone(status)} />
@@ -43,16 +39,8 @@ function ProductListItemComponent({ product, onPress }: ProductListItemProps) {
 
         <View className="flex-row justify-between gap-2">
           <View>
-            <Text className="text-xs font-semibold uppercase text-muted-foreground">Total</Text>
+            <Text className="text-xs font-semibold uppercase text-muted-foreground">Stock Total</Text>
             <Text className="text-base font-bold text-foreground">{product.stockTotal}</Text>
-          </View>
-          <View>
-            <Text className="text-xs font-semibold uppercase text-muted-foreground">Reservado</Text>
-            <Text className="text-base font-bold text-foreground">{product.reservedStock}</Text>
-          </View>
-          <View>
-            <Text className="text-xs font-semibold uppercase text-muted-foreground">Disponible</Text>
-            <Text className="text-base font-bold text-foreground">{product.availableStock}</Text>
           </View>
         </View>
       </Card>

@@ -24,25 +24,25 @@ export function updateVariant(
     .get();
 }
 
-export function updateVariantStock(
+export async function updateVariantStock(
   id: string,
   stock: number,
   db: RepositoryDatabase = getDatabaseSync(),
 ) {
-  return db
+  const result = await db
     .update(productVariants)
     .set({ stock, updatedAt: new Date() })
     .where(eq(productVariants.id, id))
-    .returning()
-    .get();
+    .returning();
+  return result[0];
 }
 
-export function reserveStock(
+export async function reserveStock(
   id: string,
   quantity: number,
   db: RepositoryDatabase = getDatabaseSync(),
 ) {
-  return db
+  const result = await db
     .update(productVariants)
     .set({
       reservedStock: sql`${productVariants.reservedStock} + ${quantity}`,
@@ -54,38 +54,38 @@ export function reserveStock(
         gte(sql<number>`${productVariants.stock} - ${productVariants.reservedStock}`, quantity),
       ),
     )
-    .returning()
-    .get();
+    .returning();
+  return result[0];
 }
 
-export function releaseReservedStock(
+export async function releaseReservedStock(
   id: string,
   quantity: number,
   db: RepositoryDatabase = getDatabaseSync(),
 ) {
-  return db
+  const result = await db
     .update(productVariants)
     .set({
       reservedStock: sql`case when ${productVariants.reservedStock} - ${quantity} < 0 then 0 else ${productVariants.reservedStock} - ${quantity} end`,
       updatedAt: new Date(),
     })
     .where(eq(productVariants.id, id))
-    .returning()
-    .get();
+    .returning();
+  return result[0];
 }
 
-export function decrementStock(
+export async function decrementStock(
   id: string,
   quantity: number,
   db: RepositoryDatabase = getDatabaseSync(),
 ) {
-  return db
+  const result = await db
     .update(productVariants)
     .set({
       stock: sql`${productVariants.stock} - ${quantity}`,
       updatedAt: new Date(),
     })
     .where(and(eq(productVariants.id, id), gte(productVariants.stock, quantity)))
-    .returning()
-    .get();
+    .returning();
+  return result[0];
 }

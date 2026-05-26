@@ -1,4 +1,4 @@
-import { PurchasesScreen } from "@/modules/purchases";
+import { PurchasesListScreen } from "@/modules/purchases";
 
-export default PurchasesScreen;
+export default PurchasesListScreen;
 

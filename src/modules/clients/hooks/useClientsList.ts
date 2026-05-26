@@ -48,6 +48,7 @@ export function useClientsList() {
     error,
     isLoading,
     isRefreshing,
+    reload: loadClients,
     refresh: () => loadClients(true),
     searchTerm,
     setSearchTerm,

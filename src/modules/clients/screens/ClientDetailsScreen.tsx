@@ -1,10 +1,11 @@
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 
 import {
   Button,
   Card,
+  CurrencyText,
   EmptyState,
   Header,
   LoadingSpinner,
@@ -14,6 +15,7 @@ import {
 
 import { ClientSummaryCard } from "../components";
 import { useClientDetails } from "../hooks";
+import { OrderPaymentStatusBadge, OrderStatusBadge } from "@/modules/orders/components";
 
 function getIdParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -41,13 +43,13 @@ export function ClientDetailsScreen() {
           title="Cliente no encontrado"
           description={error ?? "El cliente no existe o fue eliminado."}
           actionLabel="Volver"
-          onActionPress={() => router.back()}
+          onActionPress={() => router.replace("/clients" as Href)}
         />
       </Screen>
     );
   }
 
-  const { client, debt, ordersCount } = details;
+  const { client, debt, orders, ordersCount } = details;
   const canOpenWhatsapp = Boolean(client.whatsappLink);
 
   return (
@@ -56,12 +58,20 @@ export function ClientDetailsScreen() {
         title={client.name}
         subtitle={client.phone || "Sin telefono cargado"}
         rightSlot={
-          <Button
-            title="Editar"
-            size="sm"
-            variant="outline"
-            onPress={() => router.push(`/clients/${client.id}/edit` as Href)}
-          />
+          <View className="flex-row gap-2">
+            <Button
+              title="Volver"
+              size="sm"
+              variant="ghost"
+              onPress={() => router.replace("/clients" as Href)}
+            />
+            <Button
+              title="Editar"
+              size="sm"
+              variant="outline"
+              onPress={() => router.push(`/clients/${client.id}/edit` as Href)}
+            />
+          </View>
         }
       />
 
@@ -92,10 +102,42 @@ export function ClientDetailsScreen() {
 
         <Card className="gap-2">
           <Text className="text-base font-bold text-foreground">Historial</Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
-            Los pedidos, balances y actividad del cliente se conectaran desde este
-            punto.
-          </Text>
+          {orders.length > 0 ? (
+            <View className="gap-3">
+              {orders.map((order) => (
+                <Pressable
+                  key={order.id}
+                  className="gap-2 border-b border-border pb-3 last:border-b-0 last:pb-0"
+                  onPress={() => router.push(`/orders/${order.id}` as Href)}
+                >
+                  <View className="flex-row items-start justify-between gap-3">
+                    <View className="gap-1">
+                      <Text className="text-sm font-bold text-foreground">
+                        Pedido #{order.id.slice(-6).toUpperCase()}
+                      </Text>
+                      <Text className="text-xs text-muted-foreground">
+                        {order.orderedAt.toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <CurrencyText amount={order.totalAmount} className="text-sm font-bold" />
+                  </View>
+                  <View className="flex-row flex-wrap items-center gap-2">
+                    <OrderStatusBadge status={order.status} />
+                    <OrderPaymentStatusBadge status={order.paymentStatus} />
+                    {order.balanceDue > 0 ? (
+                      <Text className="text-xs font-semibold text-danger">
+                        Saldo: {order.balanceDue}
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <Text className="text-sm leading-5 text-muted-foreground">
+              Este cliente todavia no tiene pedidos registrados.
+            </Text>
+          )}
           <Button title="Actualizar" variant="outline" onPress={reload} />
         </Card>
       </ScreenBody>

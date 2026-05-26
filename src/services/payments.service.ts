@@ -10,6 +10,7 @@ import {
   type paymentTypes,
 } from "@/database/schema";
 import { createId } from "@/utils/ids";
+import { requireCurrentUser } from "./auth.service";
 
 export interface RegisterOrderPaymentInput {
   orderId: string;
@@ -23,7 +24,7 @@ export interface RegisterOrderPaymentInput {
 
 function assertPaymentAmount(amount: number) {
   if (!Number.isInteger(amount) || amount <= 0) {
-    throw new Error("Payment amount must be a positive integer.");
+    throw new Error("El monto del pago debe ser un numero entero positivo.");
   }
 }
 
@@ -39,13 +40,17 @@ function calculatePaymentStatus(totalAmount: number, paidAmount: number) {
   return "partial" as const;
 }
 
-function updateClientDebt(clientId: string, db: Database) {
+function updateClientDebt(clientId: string, userId: string, db: Database) {
   const [result] = db
     .select({
       debt: sql<number>`coalesce(sum(${orders.balanceDue}), 0)`,
     })
     .from(orders)
-    .where(and(eq(orders.clientId, clientId), sql`${orders.status} != 'cancelled'`))
+    .where(and(
+      eq(orders.clientId, clientId),
+      sql`${orders.status} != 'cancelled'`,
+      sql`orders.user_id = ${userId}`,
+    ))
     .all();
 
   db.update(clients)
@@ -58,16 +63,21 @@ export async function registerOrderPayment(input: RegisterOrderPaymentInput): Pr
   assertPaymentAmount(input.amount);
 
   const db = await getDatabase();
+  const user = requireCurrentUser();
 
   return db.transaction((tx) => {
-    const order = tx.select().from(orders).where(eq(orders.id, input.orderId)).get();
+    const order = tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, input.orderId), sql`orders.user_id = ${user.id}`))
+      .get();
 
     if (!order) {
-      throw new Error(`Order ${input.orderId} was not found.`);
+      throw new Error("Pedido no encontrado.");
     }
 
     if (order.status === "cancelled") {
-      throw new Error("Cannot register payments for a cancelled order.");
+      throw new Error("No se pueden registrar pagos en un pedido cancelado.");
     }
 
     const type = input.type ?? "partial";
@@ -75,7 +85,7 @@ export async function registerOrderPayment(input: RegisterOrderPaymentInput): Pr
     const nextPaidAmount = Math.max(order.paidAmount + signedAmount, 0);
 
     if (type !== "refund" && nextPaidAmount > order.totalAmount) {
-      throw new Error("Payment exceeds the order balance.");
+      throw new Error("El pago supera el saldo pendiente del pedido.");
     }
 
     const nextBalanceDue = Math.max(order.totalAmount - nextPaidAmount, 0);
@@ -109,7 +119,7 @@ export async function registerOrderPayment(input: RegisterOrderPaymentInput): Pr
       .where(eq(orders.id, order.id))
       .run();
 
-    updateClientDebt(order.clientId, tx as unknown as Database);
+    updateClientDebt(order.clientId, user.id, tx as unknown as Database);
 
     return payment;
   });

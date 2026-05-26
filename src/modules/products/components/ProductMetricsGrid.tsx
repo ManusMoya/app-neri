@@ -12,27 +12,15 @@ interface ProductMetricsGridProps {
 
 export function ProductMetricsGrid({
   stockTotal,
-  reservedStock,
-  availableStock,
   inventoryValue,
   averageMargin,
-}: ProductMetricsGridProps) {
+}: Omit<ProductMetricsGridProps, 'reservedStock' | 'availableStock'>) {
   return (
     <View className="gap-3">
       <View className="flex-row gap-3">
         <Card className="flex-1 gap-1">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">Stock</Text>
+          <Text className="text-xs font-semibold uppercase text-muted-foreground">Stock Total</Text>
           <Text className="text-xl font-bold text-foreground">{stockTotal}</Text>
-        </Card>
-        <Card className="flex-1 gap-1">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">Disponible</Text>
-          <Text className="text-xl font-bold text-foreground">{availableStock}</Text>
-        </Card>
-      </View>
-      <View className="flex-row gap-3">
-        <Card className="flex-1 gap-1">
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">Reservado</Text>
-          <Text className="text-xl font-bold text-foreground">{reservedStock}</Text>
         </Card>
         <Card className="flex-1 gap-1">
           <Text className="text-xs font-semibold uppercase text-muted-foreground">Margen prom.</Text>

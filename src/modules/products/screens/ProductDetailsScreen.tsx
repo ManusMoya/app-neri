@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { useState } from "react";
+import { Alert, Platform, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 
 import {
@@ -11,6 +12,7 @@ import {
   ScreenBody,
   SectionTitle,
 } from "@/components/ui";
+import { deleteProduct } from "@/services/products.service";
 
 import { ProductMetricsGrid, VariantCard } from "../components";
 import { useProductDetails } from "../hooks";
@@ -24,6 +26,62 @@ export function ProductDetailsScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = getIdParam(params.id) ?? "";
   const { error, isLoading, product, reload } = useProductDetails(id);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const executeDelete = async () => {
+    if (!product || isDeleting) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await deleteProduct(product.id);
+      router.replace("/products" as Href);
+    } catch (deleteError) {
+      const message = deleteError instanceof Error
+        ? deleteError.message
+        : "Intentalo nuevamente.";
+
+      if (Platform.OS === "web") {
+        window.alert(`No se pudo eliminar\n\n${message}`);
+      } else {
+        Alert.alert("No se pudo eliminar", message);
+      }
+
+      setIsDeleting(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (!product || isDeleting) {
+      return;
+    }
+
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        "Eliminar producto\n\nEl producto dejara de aparecer en el catalogo. El historial de ventas y compras se conserva.",
+      );
+
+      if (confirmed) {
+        void executeDelete();
+      }
+
+      return;
+    }
+
+    Alert.alert(
+      "Eliminar producto",
+      "El producto dejara de aparecer en el catalogo. El historial de ventas y compras se conserva.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => void executeDelete(),
+        },
+      ],
+    );
+  };
 
   if (isLoading) {
     return (
@@ -41,7 +99,7 @@ export function ProductDetailsScreen() {
           title="Producto no encontrado"
           description={error ?? "El producto no existe o fue eliminado."}
           actionLabel="Volver"
-          onActionPress={() => router.back()}
+          onActionPress={() => router.replace("/products" as Href)}
         />
       </Screen>
     );
@@ -53,44 +111,41 @@ export function ProductDetailsScreen() {
     <Screen>
       <Header
         title={product.name}
-        subtitle={`${product.category.name} · ${product.provider.name}`}
+        subtitle={product.provider.name}
         rightSlot={
-          <Button
-            title="Editar"
-            size="sm"
-            variant="outline"
-            onPress={() => router.push(`/products/${product.id}/edit` as Href)}
-          />
+          <View className="flex-row gap-2">
+            <Button
+              title="Ver todos"
+              size="sm"
+              variant="ghost"
+              onPress={() => router.replace("/products" as Href)}
+            />
+            <Button
+              title="Editar"
+              size="sm"
+              variant="outline"
+              onPress={() => router.push(`/products/${product.id}/edit` as Href)}
+            />
+            <Button
+              title="Eliminar"
+              size="sm"
+              variant="danger"
+              loading={isDeleting}
+              onPress={confirmDelete}
+            />
+          </View>
         }
       />
 
       <ScreenBody>
         <ProductMetricsGrid
           stockTotal={product.stockTotal}
-          reservedStock={product.reservedStock}
-          availableStock={product.availableStock}
           inventoryValue={product.inventoryValue}
           averageMargin={product.averageMargin}
         />
 
         <Card className="gap-3">
-          <View className="gap-1">
-            <Text className="text-xs font-semibold uppercase text-muted-foreground">
-              Descripcion
-            </Text>
-            <Text className="text-sm leading-5 text-foreground">
-              {product.description || "Sin descripcion."}
-            </Text>
-          </View>
           <View className="flex-row gap-3">
-            <View className="flex-1 gap-1">
-              <Text className="text-xs font-semibold uppercase text-muted-foreground">
-                Categoria
-              </Text>
-              <Text className="text-sm font-semibold text-foreground">
-                {product.category.name}
-              </Text>
-            </View>
             <View className="flex-1 gap-1">
               <Text className="text-xs font-semibold uppercase text-muted-foreground">
                 Proveedor

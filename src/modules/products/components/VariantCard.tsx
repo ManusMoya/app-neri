@@ -27,9 +27,6 @@ export function VariantCard({ variant }: VariantCardProps) {
           <Text className="text-base font-bold text-foreground" numberOfLines={1}>
             {buildVariantLabel(variant)}
           </Text>
-          <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-            SKU {variant.sku || "-"} · Barcode {variant.barcode || "-"}
-          </Text>
         </View>
         <Badge label={getStockStatusLabel(status)} tone={getStockStatusTone(status)} />
       </View>
@@ -39,17 +36,6 @@ export function VariantCard({ variant }: VariantCardProps) {
           <Text className="text-xs font-semibold uppercase text-muted-foreground">Stock</Text>
           <Text className="text-base font-bold text-foreground">{variant.stock}</Text>
         </View>
-        <View>
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">Reservado</Text>
-          <Text className="text-base font-bold text-foreground">{variant.reservedStock}</Text>
-        </View>
-        <View>
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">Disponible</Text>
-          <Text className="text-base font-bold text-foreground">{getAvailableStock(variant)}</Text>
-        </View>
-      </View>
-
-      <View className="flex-row justify-between gap-2">
         <View>
           <Text className="text-xs font-semibold uppercase text-muted-foreground">Costo</Text>
           <CurrencyText amount={variant.costPrice} />
