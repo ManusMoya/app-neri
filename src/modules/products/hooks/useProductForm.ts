@@ -24,6 +24,23 @@ export const emptyVariantValues = {
   salePrice: 0,
 };
 
+function isEmptyVariant(variant: ProductFormValues["variants"][number]) {
+  return !variant.color?.trim()
+    && !variant.size?.trim()
+    && !variant.model?.trim()
+    && variant.costPrice === 0
+    && variant.salePrice === 0;
+}
+
+function normalizeVariants(values: ProductFormValues): ProductFormValues {
+  const variants = values.variants.filter((variant) => !isEmptyVariant(variant));
+
+  return {
+    ...values,
+    variants,
+  };
+}
+
 export function useProductForm({ mode, product }: UseProductFormOptions) {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -57,10 +74,11 @@ export function useProductForm({ mode, product }: UseProductFormOptions) {
     setSubmitError(null);
 
     try {
+      const normalizedValues = normalizeVariants(values);
       const savedProduct =
         mode === "create"
-          ? await createProductFromForm(values)
-          : await updateProductFromForm(product?.id ?? "", values);
+          ? await createProductFromForm(normalizedValues)
+          : await updateProductFromForm(product?.id ?? "", normalizedValues);
 
       router.replace({
         pathname: "/products/[id]",

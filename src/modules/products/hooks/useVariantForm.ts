@@ -47,6 +47,14 @@ export function useVariantForm(control: Control<ProductFormValues>) {
     name: "variants",
   });
 
+  function isEmptyVariant(variant: ProductFormValues["variants"][number]) {
+    return !variant.color?.trim()
+      && !variant.size?.trim()
+      && !variant.model?.trim()
+      && variant.costPrice === 0
+      && variant.salePrice === 0;
+  }
+
   return {
     ...fieldArray,
     addVariant: () => fieldArray.append({ ...emptyVariantValues }),
@@ -58,6 +66,12 @@ export function useVariantForm(control: Control<ProductFormValues>) {
         costPrice: input.costPrice,
         salePrice: input.salePrice,
       }));
+
+      const currentVariants = fieldArray.fields as unknown as ProductFormValues["variants"];
+      if (currentVariants.length === 1 && isEmptyVariant(currentVariants[0])) {
+        fieldArray.replace(variants);
+        return;
+      }
 
       for (const variant of variants) {
         fieldArray.append(variant);
