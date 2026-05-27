@@ -4,13 +4,13 @@ import { useRouter } from "expo-router";
 
 import { Button, EmptyState, Header, LoadingSpinner, Screen } from "@/components/ui";
 import { OrderListItem } from "../components/OrderListItem";
+import { ClientSelector } from "../components/ClientSelector";
 import { useOrdersList } from "../hooks/useOrdersList";
 
-type OrderPurchaseFilter = "all" | "purchased" | "pending";
+type OrderPurchaseFilter = "all" | "pending";
 
 const filters: { label: string; value: OrderPurchaseFilter }[] = [
   { label: "Todos", value: "all" },
-  { label: "Comprados", value: "purchased" },
   { label: "Pendientes", value: "pending" },
 ];
 
@@ -18,19 +18,33 @@ export function OrdersListScreen() {
   const router = useRouter();
   const { orders, error, isLoading, isRefreshing, refresh } = useOrdersList();
   const [filter, setFilter] = useState<OrderPurchaseFilter>("all");
+  const [clientSelectorVisible, setClientSelectorVisible] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedClientName, setSelectedClientName] = useState<string | null>(null);
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "unpaid" | "debt">("all");
   const filteredOrders = useMemo(
     () => orders.filter((order) => {
       if (filter === "pending") {
-        return order.status === "draft";
+        if (order.status !== "draft") {
+          return false;
+        }
       }
 
-      if (filter === "purchased") {
-        return order.status !== "draft" && order.status !== "cancelled";
+      if (selectedClientId && order.clientId !== selectedClientId) {
+        return false;
+      }
+
+      if (paymentFilter === "unpaid" && order.paymentStatus !== "unpaid") {
+        return false;
+      }
+
+      if (paymentFilter === "debt" && order.balanceDue <= 0) {
+        return false;
       }
 
       return true;
     }),
-    [filter, orders],
+    [filter, orders, paymentFilter, selectedClientId],
   );
 
   const handleCreateOrder = () => {
@@ -53,17 +67,55 @@ export function OrdersListScreen() {
         </View>
       ) : null}
 
-      <View className="mb-4 flex-row gap-2">
-        {filters.map((item) => (
+      <View className="mb-4 gap-2">
+        <View className="flex-row gap-2">
+          {filters.map((item) => (
+            <Button
+              key={item.value}
+              title={item.label}
+              size="sm"
+              variant={filter === item.value ? "primary" : "outline"}
+              className="flex-1"
+              onPress={() => setFilter(item.value)}
+            />
+          ))}
+        </View>
+        <View className="flex-row flex-wrap gap-2">
           <Button
-            key={item.value}
-            title={item.label}
+            title={selectedClientName ? selectedClientName : "Cliente"}
             size="sm"
-            variant={filter === item.value ? "primary" : "outline"}
-            className="flex-1"
-            onPress={() => setFilter(item.value)}
+            variant={selectedClientId ? "primary" : "outline"}
+            className="min-w-[112px] flex-1"
+            onPress={() => setClientSelectorVisible(true)}
           />
-        ))}
+          <Button
+            title="Impagos"
+            size="sm"
+            variant={paymentFilter === "unpaid" ? "primary" : "outline"}
+            className="min-w-[96px] flex-1"
+            onPress={() => setPaymentFilter((current) => current === "unpaid" ? "all" : "unpaid")}
+          />
+          <Button
+            title="Deudores"
+            size="sm"
+            variant={paymentFilter === "debt" ? "primary" : "outline"}
+            className="min-w-[96px] flex-1"
+            onPress={() => setPaymentFilter((current) => current === "debt" ? "all" : "debt")}
+          />
+          {(selectedClientId || paymentFilter !== "all") ? (
+            <Button
+              title="Limpiar"
+              size="sm"
+              variant="ghost"
+              className="min-w-[96px] flex-1"
+              onPress={() => {
+                setSelectedClientId(null);
+                setSelectedClientName(null);
+                setPaymentFilter("all");
+              }}
+            />
+          ) : null}
+        </View>
       </View>
 
       {isLoading ? (
@@ -100,6 +152,14 @@ export function OrdersListScreen() {
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
+      <ClientSelector
+        visible={clientSelectorVisible}
+        onClose={() => setClientSelectorVisible(false)}
+        onSelect={(client) => {
+          setSelectedClientId(client.id);
+          setSelectedClientName(client.name);
+        }}
+      />
     </Screen>
   );
 }
