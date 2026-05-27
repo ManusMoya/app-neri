@@ -8,7 +8,7 @@ import { CurrencyText } from "@/components/ui/CurrencyText";
 import { useOrderDetails } from "../hooks/useOrderDetails";
 import { OrderStatusBadge } from "../components/OrderStatusBadge";
 import { OrderPaymentStatusBadge } from "../components/OrderPaymentStatusBadge";
-import { ORDER_WORKFLOW_STATUS, removeOrder } from "@/services/orders.service";
+import { ORDER_WORKFLOW_STATUS, removeOrder } from "@/services/orders.api.service";
 
 export function OrderDetailsScreen() {
   const router = useRouter();

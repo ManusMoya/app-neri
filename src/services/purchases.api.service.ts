@@ -1,7 +1,22 @@
 import type { Purchase, PurchaseItem } from "@/database/schema";
-import type { CreateReceivedPurchaseInput } from "./purchases.service";
 import { createId } from "@/utils/ids";
 import { apiRequest, fromTimestamp, toTimestamp } from "./api-client";
+
+export interface CreatePurchaseItemInput {
+  productVariantId: string;
+  quantity: number;
+  baseCost: number;
+}
+
+export interface CreateReceivedPurchaseInput {
+  providerId: string;
+  items: CreatePurchaseItemInput[];
+  shippingAmount?: number;
+  paidAmount?: number;
+  reference?: string;
+  notes?: string;
+  purchasedAt?: Date;
+}
 
 export interface PurchaseWithItems {
   purchase: Purchase;

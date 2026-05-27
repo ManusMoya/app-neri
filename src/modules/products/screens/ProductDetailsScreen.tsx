@@ -12,7 +12,7 @@ import {
   ScreenBody,
   SectionTitle,
 } from "@/components/ui";
-import { deleteProduct } from "@/services/products.service";
+import { deleteProduct } from "@/services/products.api.service";
 
 import { ProductMetricsGrid, VariantCard } from "../components";
 import { useProductDetails } from "../hooks";

@@ -7,7 +7,7 @@ import type { Provider } from "@/database/schema";
 import {
   createProviderFromForm,
   updateProviderFromForm,
-} from "@/services/providers.service";
+} from "@/services/providers.api.service";
 
 import type { ProviderFormValues } from "../types";
 import { providerFormSchema } from "../utils";

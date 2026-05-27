@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { Button, Header, LoadingSpinner, Screen, ScreenBody } from "@/components/ui";
 import { Card } from "@/components/ui/Card";
 import { CurrencyText } from "@/components/ui/CurrencyText";
-import { removePurchase } from "@/services/purchases.service";
+import { removePurchase } from "@/services/purchases.api.service";
 
 import { usePurchaseDetails } from "../hooks/usePurchaseDetails";
 

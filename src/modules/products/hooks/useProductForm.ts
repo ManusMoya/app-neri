@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import {
   createProductFromForm,
   updateProductFromForm,
-} from "@/services/products.service";
+} from "@/services/products.api.service";
 
 import type { ProductFormValues, ProductListRecord } from "../types";
 import { productFormSchema } from "../utils";

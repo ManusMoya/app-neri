@@ -1,10 +1,11 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
 
-import { getProductDetails } from "@/services/products.service";
+import { getProductDetails } from "@/services/products.api.service";
+import type { ProductListRecord } from "../types";
 
 export function useProductDetails(id: string) {
-  const [product, setProduct] = useState<Awaited<ReturnType<typeof getProductDetails>>>(null);
+  const [product, setProduct] = useState<ProductListRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

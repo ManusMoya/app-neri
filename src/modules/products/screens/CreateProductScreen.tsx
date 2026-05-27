@@ -4,7 +4,7 @@ import { useFocusEffect, type Href } from "expo-router";
 
 import { Button, EmptyState, Header, LoadingSpinner, Screen, ScreenBody } from "@/components/ui";
 import type { Provider } from "@/database/schema";
-import { listProviders } from "@/services/providers.service";
+import { listProviders } from "@/services/providers.api.service";
 
 import { ProductForm } from "../components";
 import { useProductForm } from "../hooks";

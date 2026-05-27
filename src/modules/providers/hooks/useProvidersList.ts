@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useFocusEffect } from "expo-router";
 
-import { listProviders } from "@/services/providers.service";
+import { listProviders } from "@/services/providers.api.service";
 
 import type { ProviderRecord } from "../types";
 

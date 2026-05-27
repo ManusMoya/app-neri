@@ -10,7 +10,7 @@ import {
   ScreenBody,
 } from "@/components/ui";
 import type { Provider } from "@/database/schema";
-import { listProviders } from "@/services/providers.service";
+import { listProviders } from "@/services/providers.api.service";
 
 import { ProductForm } from "../components";
 import { useProductDetails, useProductForm } from "../hooks";

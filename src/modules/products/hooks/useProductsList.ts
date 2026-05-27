@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useFocusEffect } from "expo-router";
 
-import { listProducts } from "@/services/products.service";
+import { listProducts } from "@/services/products.api.service";
 
 import type { ProductStockFilter } from "../types";
 

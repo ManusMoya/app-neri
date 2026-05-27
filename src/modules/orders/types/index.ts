@@ -1,5 +1,5 @@
-import type { Client, Order, OrderItem, Payment, ProductVariant } from "@/database/schema";
-import type { OrderWorkflowStatus } from "@/services/orders.service";
+import type { Client, Order, OrderItem, Payment } from "@/database/schema";
+import type { OrderWorkflowStatus } from "@/services/orders.api.service";
 
 export interface OrderWithDetails extends Order {
   client: Client;

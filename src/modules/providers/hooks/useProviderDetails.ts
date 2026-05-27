@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
 
-import { getProviderDetails, type ProviderDetails } from "@/services/providers.service";
+import { getProviderDetails, type ProviderDetails } from "@/services/providers.api.service";
 
 export function useProviderDetails(id: string) {
   const [details, setDetails] = useState<ProviderDetails | null>(null);

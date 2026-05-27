@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRouter, type Href } from "expo-router";
 
-import { createReceivedPurchase, CreateReceivedPurchaseInput, CreatePurchaseItemInput } from "@/services/purchases.service";
+import { createReceivedPurchase, CreateReceivedPurchaseInput, CreatePurchaseItemInput } from "@/services/purchases.api.service";
 import { Provider } from "@/database/schema";
 
 export function usePurchaseForm() {

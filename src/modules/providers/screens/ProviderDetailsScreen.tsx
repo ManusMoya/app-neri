@@ -12,7 +12,7 @@ import {
   Screen,
   ScreenBody,
 } from "@/components/ui";
-import { removeProvider } from "@/services/providers.service";
+import { removeProvider } from "@/services/providers.api.service";
 
 import { ProviderSummaryCard } from "../components";
 import { useProviderDetails } from "../hooks";

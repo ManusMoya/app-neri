@@ -8,7 +8,7 @@ import type {
 import { getProductMetrics, getStockStatus } from "@/modules/products/utils";
 import { createId } from "@/utils/ids";
 import { apiRequest, fromTimestamp } from "./api-client";
-import { listCategories } from "./categories.api.service";
+import { createCategory, listCategories } from "./categories.api.service";
 import { listProviders } from "./providers.api.service";
 import { listProductVariants } from "./product-variants.api.service";
 
@@ -105,11 +105,9 @@ export async function getProductDetails(id: string) {
 
 export async function createProductFromForm(values: ProductFormValues) {
   const categories = await listCategories();
-  const generalCategory = categories.find((category) => category.name === "General") ?? categories[0];
-
-  if (!generalCategory) {
-    throw new Error("Crea una categoria antes de crear productos por API.");
-  }
+  const generalCategory = categories.find((category) => category.name === "General")
+    ?? categories[0]
+    ?? await createCategory({ name: "General", description: null });
 
   const productId = createId("product");
   const row = await apiRequest<ProductRow>("/products", {
