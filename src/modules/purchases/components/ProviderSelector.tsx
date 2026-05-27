@@ -3,9 +3,8 @@ import { FlatList, Modal, Pressable, Text, View } from "react-native";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 
 import { Button, Card, Input } from "@/components/ui";
-import { getSQLiteConnection } from "@/database";
 import type { Provider } from "@/database/schema";
-import { requireCurrentUser } from "@/services/auth.service";
+import { listProviders } from "@/services/providers.api.service";
 
 interface ProviderSelectorProps {
   onSelect: (provider: Provider) => void;
@@ -17,33 +16,18 @@ export function ProviderSelector({ onSelect, onClose, visible }: ProviderSelecto
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const loadProviders = useCallback(async () => {
-    const sqlite = await getSQLiteConnection();
-    const user = requireCurrentUser();
-    const rows = await sqlite.getAllAsync<{
-      id: string;
-      name: string;
-      phone: string | null;
-      whatsapp_link: string | null;
-      email: string | null;
-      address: string | null;
-      notes: string | null;
-      created_at: number;
-      updated_at: number;
-    }>("select * from providers where user_id = ? and id not like 'provider_deleted%' order by name", user.id);
+    setError(null);
 
-    setProviders(rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      phone: row.phone,
-      whatsappLink: row.whatsapp_link,
-      email: row.email,
-      address: row.address,
-      notes: row.notes,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-    })));
+    try {
+      setProviders(await listProviders());
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error ? loadError.message : "No se pudieron cargar los proveedores.",
+      );
+    }
   }, []);
 
   useFocusEffect(
@@ -84,6 +68,9 @@ export function ProviderSelector({ onSelect, onClose, visible }: ProviderSelecto
             value={searchTerm}
             onChangeText={setSearchTerm}
           />
+          {error ? (
+            <Text className="mt-3 text-sm font-medium text-danger">{error}</Text>
+          ) : null}
         </View>
 
         <FlatList
