@@ -3,15 +3,8 @@ import { useFocusEffect } from "expo-router";
 
 import { listClients } from "@/services/clients.api.service";
 import { listOrders } from "@/services/orders.api.service";
-import {
-  listPendingPurchasesByProvider,
-  type PendingPurchaseProduct,
-  type PendingPurchaseProviderGroup,
-} from "@/services/pending-purchases.service";
 
 import type { OrderListRecord } from "../types";
-
-export type { PendingPurchaseProduct, PendingPurchaseProviderGroup };
 
 async function listOrdersWithClient() {
   const [orders, clients] = await Promise.all([listOrders(), listClients()]);
@@ -32,7 +25,6 @@ async function listOrdersWithClient() {
 
 export function useOrdersList() {
   const [orders, setOrders] = useState<OrderListRecord[]>([]);
-  const [pendingPurchases, setPendingPurchases] = useState<PendingPurchaseProviderGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,12 +37,8 @@ export function useOrdersList() {
     }
 
     try {
-      const [ordersResult, pendingPurchasesResult] = await Promise.all([
-        listOrdersWithClient(),
-        listPendingPurchasesByProvider(),
-      ]);
+      const ordersResult = await listOrdersWithClient();
       setOrders(ordersResult);
-      setPendingPurchases(pendingPurchasesResult);
       setError(null);
     }
  catch (loadError) {
@@ -71,7 +59,6 @@ export function useOrdersList() {
 
   return {
     orders,
-    pendingPurchases,
     error,
     isLoading,
     isRefreshing,

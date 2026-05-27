@@ -2,6 +2,10 @@ import { useCallback, useMemo, useState } from "react";
 import { useFocusEffect } from "expo-router";
 
 import { listProducts } from "@/services/products.api.service";
+import {
+  listPendingPurchasesByProvider,
+  type PendingPurchaseProviderGroup,
+} from "@/services/pending-purchases.service";
 
 import type { ProductStockFilter } from "../types";
 
@@ -9,6 +13,7 @@ export function useProductsList(providerId?: string) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<ProductStockFilter>("all");
   const [products, setProducts] = useState<Awaited<ReturnType<typeof listProducts>>>([]);
+  const [pendingPurchases, setPendingPurchases] = useState<PendingPurchaseProviderGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +26,27 @@ export function useProductsList(providerId?: string) {
     }
 
     try {
-      const result = await listProducts(searchTerm, filter, providerId);
+      const [result, pendingResult] = await Promise.all([
+        listProducts(searchTerm, filter === "to-buy" ? "all" : filter, providerId),
+        listPendingPurchasesByProvider(),
+      ]);
+      const pendingVariantIds = new Set(
+        pendingResult.flatMap((group) => group.products.map((product) => product.productVariantId)),
+      );
+
       setProducts(result);
+      setPendingPurchases(
+        providerId
+          ? pendingResult.filter((group) => group.providerId === providerId)
+          : pendingResult,
+      );
+      if (filter === "to-buy") {
+        setProducts(
+          result.filter((product) =>
+            product.variants.some((variant) => pendingVariantIds.has(variant.id)),
+          ),
+        );
+      }
       setError(null);
     } catch (loadError) {
       setError(
@@ -53,6 +77,10 @@ export function useProductsList(providerId?: string) {
       return "Sin productos con stock bajo";
     }
 
+    if (filter === "to-buy") {
+      return "Sin productos a comprar";
+    }
+
     return "Sin productos cargados";
   }, [filter, searchTerm]);
 
@@ -63,6 +91,7 @@ export function useProductsList(providerId?: string) {
     isLoading,
     isRefreshing,
     products,
+    pendingPurchases,
     refresh: () => loadProducts(true),
     resetFilters: () => {
       setSearchTerm("");

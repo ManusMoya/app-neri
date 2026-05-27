@@ -1,11 +1,10 @@
-import React, { useCallback, useMemo, useState } from "react";
-import * as Clipboard from "expo-clipboard";
-import { Alert, FlatList, Platform, RefreshControl, Text, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { FlatList, RefreshControl, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
-import { Button, Card, EmptyState, Header, LoadingSpinner, Screen } from "@/components/ui";
+import { Button, EmptyState, Header, LoadingSpinner, Screen } from "@/components/ui";
 import { OrderListItem } from "../components/OrderListItem";
-import { type PendingPurchaseProviderGroup, useOrdersList } from "../hooks/useOrdersList";
+import { useOrdersList } from "../hooks/useOrdersList";
 
 type OrderPurchaseFilter = "all" | "purchased" | "pending";
 
@@ -15,38 +14,9 @@ const filters: { label: string; value: OrderPurchaseFilter }[] = [
   { label: "Pendientes", value: "pending" },
 ];
 
-function buildPendingPurchasesText(groups: PendingPurchaseProviderGroup[]) {
-  const lines = ["Pedidos pendientes para comprar"];
-
-  for (const group of groups) {
-    lines.push("", `Proveedor: ${group.providerName}`);
-
-    for (const product of group.products) {
-      lines.push(
-        `- ${product.productName} (${product.variantLabel}) x${product.quantity} - ${product.ordersCount} pedido(s)`,
-      );
-    }
-  }
-
-  return lines.join("\n");
-}
-
-function buildProviderPendingPurchasesText(group: PendingPurchaseProviderGroup) {
-  return buildPendingPurchasesText([group]);
-}
-
-function showCopyFeedback(message: string) {
-  if (Platform.OS === "web") {
-    globalThis.alert(message);
-    return;
-  }
-
-  Alert.alert("Lista copiada", message);
-}
-
 export function OrdersListScreen() {
   const router = useRouter();
-  const { orders, pendingPurchases, error, isLoading, isRefreshing, refresh } = useOrdersList();
+  const { orders, error, isLoading, isRefreshing, refresh } = useOrdersList();
   const [filter, setFilter] = useState<OrderPurchaseFilter>("all");
   const filteredOrders = useMemo(
     () => orders.filter((order) => {
@@ -66,24 +36,6 @@ export function OrdersListScreen() {
   const handleCreateOrder = () => {
     router.push("/orders/create");
   };
-
-  const handleCopyPendingPurchases = useCallback(async () => {
-    if (pendingPurchases.length === 0) {
-      showCopyFeedback("No hay pedidos pendientes para copiar.");
-      return;
-    }
-
-    await Clipboard.setStringAsync(buildPendingPurchasesText(pendingPurchases));
-    showCopyFeedback("Pegala en WhatsApp cuando quieras enviarla.");
-  }, [pendingPurchases]);
-
-  const handleCopyProviderPendingPurchases = useCallback(
-    async (group: PendingPurchaseProviderGroup) => {
-      await Clipboard.setStringAsync(buildProviderPendingPurchasesText(group));
-      showCopyFeedback(`Lista de ${group.providerName} copiada para WhatsApp.`);
-    },
-    [],
-  );
 
   return (
     <Screen scroll={false}>
@@ -123,65 +75,9 @@ export function OrdersListScreen() {
           renderItem={({ item }) => <OrderListItem order={item} />}
           ListHeaderComponent={
             filter === "pending" ? (
-              <View className="mb-4 gap-3">
-                <Card className="gap-3">
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="min-w-0 flex-1 text-base font-bold text-foreground">
-                      Productos pendientes por proveedor
-                    </Text>
-                    <Button
-                      title="Copiar todo"
-                      size="sm"
-                      variant="outline"
-                      onPress={handleCopyPendingPurchases}
-                    />
-                  </View>
-                  {pendingPurchases.length > 0 ? (
-                    pendingPurchases.map((group) => (
-                      <View key={group.providerId} className="gap-3 border-t border-border pt-3">
-                        <View className="flex-row items-center justify-between gap-3">
-                          <Text className="min-w-0 flex-1 text-sm font-bold text-foreground">
-                            {group.providerName}
-                          </Text>
-                          <Button
-                            title="Copiar"
-                            size="sm"
-                            variant="outline"
-                            onPress={() => handleCopyProviderPendingPurchases(group)}
-                          />
-                        </View>
-                        {group.products.map((product) => (
-                          <View
-                            key={product.productVariantId}
-                            className="flex-row items-start justify-between gap-3 border-b border-border pb-2 last:border-b-0 last:pb-0"
-                          >
-                            <View className="min-w-0 flex-1">
-                              <Text className="text-sm font-semibold text-foreground">
-                                {product.productName}
-                              </Text>
-                              <Text className="text-xs text-muted-foreground">
-                                {product.variantLabel} - {product.ordersCount} pedido(s)
-                              </Text>
-                            </View>
-                            <Text className="text-sm font-bold text-foreground">
-                              x{product.quantity}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    ))
-                  ) : (
-                    <Text className="text-sm text-muted-foreground">
-                      No hay productos pendientes para comprar.
-                    </Text>
-                  )}
-                </Card>
-                <View className="flex-row items-center justify-between gap-3">
-                  <Text className="min-w-0 flex-1 text-base font-bold text-foreground">
-                    Historial de pedidos pendientes
-                  </Text>
-                </View>
-              </View>
+              <Text className="mb-4 text-base font-bold text-foreground">
+                Historial de pedidos pendientes
+              </Text>
             ) : null
           }
           refreshControl={

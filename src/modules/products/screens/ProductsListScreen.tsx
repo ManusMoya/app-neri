@@ -1,9 +1,11 @@
 import { useCallback } from "react";
-import { FlatList, RefreshControl, Text, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import { Alert, FlatList, Platform, RefreshControl, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 
 import {
   Button,
+  Card,
   EmptyState,
   Header,
   Input,
@@ -14,12 +16,37 @@ import {
 import { ProductListItem } from "../components";
 import { useProductsList } from "../hooks";
 import type { ProductListRecord, ProductStockFilter } from "../types";
+import type { PendingPurchaseProviderGroup } from "@/services/pending-purchases.service";
 
 const filters: { label: string; value: ProductStockFilter }[] = [
   { label: "Todos", value: "all" },
   { label: "Sin stock", value: "out" },
   { label: "Stock bajo", value: "low" },
+  { label: "A comprar", value: "to-buy" },
 ];
+
+function buildToBuyText(groups: PendingPurchaseProviderGroup[]) {
+  const lines = ["Productos a comprar"];
+
+  for (const group of groups) {
+    lines.push("", `Proveedor: ${group.providerName}`);
+
+    for (const product of group.products) {
+      lines.push(`- ${product.productName} (${product.variantLabel}) x${product.quantity}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function showCopyFeedback(message: string) {
+  if (Platform.OS === "web") {
+    globalThis.alert(message);
+    return;
+  }
+
+  Alert.alert("Lista copiada", message);
+}
 
 export function ProductsListScreen() {
   const router = useRouter();
@@ -32,6 +59,7 @@ export function ProductsListScreen() {
     isLoading,
     isRefreshing,
     products,
+    pendingPurchases,
     refresh,
     resetFilters,
     searchTerm,
@@ -60,6 +88,16 @@ export function ProductsListScreen() {
     router.replace("/products" as Href);
   }, [resetFilters, router]);
 
+  const copyToBuyList = useCallback(async (groups: PendingPurchaseProviderGroup[]) => {
+    if (groups.length === 0) {
+      showCopyFeedback("No hay productos a comprar para copiar.");
+      return;
+    }
+
+    await Clipboard.setStringAsync(buildToBuyText(groups));
+    showCopyFeedback("Lista copiada para pegar en WhatsApp.");
+  }, []);
+
   return (
     <Screen scroll={false}>
       <Header
@@ -87,14 +125,14 @@ export function ProductsListScreen() {
           placeholder="Nombre, SKU o barcode"
           value={searchTerm}
         />
-        <View className="flex-row gap-2">
+        <View className="flex-row flex-wrap gap-2">
           {filters.map((item) => (
             <Button
               key={item.value}
               title={item.label}
               size="sm"
               variant={filter === item.value ? "primary" : "outline"}
-              className="flex-1"
+              className="min-w-[96px] flex-1"
               onPress={() => setFilter(item.value)}
             />
           ))}
@@ -117,6 +155,64 @@ export function ProductsListScreen() {
           data={products}
           keyExtractor={(item) => item.id}
           renderItem={renderProduct}
+          ListHeaderComponent={
+            filter === "to-buy" ? (
+              <View className="mb-4 gap-3">
+                <Card className="gap-3">
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text className="min-w-0 flex-1 text-base font-bold text-foreground">
+                      Lista para proveedores
+                    </Text>
+                    <Button
+                      title="Copiar todo"
+                      size="sm"
+                      variant="outline"
+                      onPress={() => copyToBuyList(pendingPurchases)}
+                    />
+                  </View>
+                  {pendingPurchases.length > 0 ? (
+                    pendingPurchases.map((group) => (
+                      <View key={group.providerId} className="gap-3 border-t border-border pt-3">
+                        <View className="flex-row items-center justify-between gap-3">
+                          <Text className="min-w-0 flex-1 text-sm font-bold text-foreground">
+                            {group.providerName}
+                          </Text>
+                          <Button
+                            title="Copiar"
+                            size="sm"
+                            variant="outline"
+                            onPress={() => copyToBuyList([group])}
+                          />
+                        </View>
+                        {group.products.map((product) => (
+                          <View
+                            key={product.productVariantId}
+                            className="flex-row items-start justify-between gap-3 border-b border-border pb-2 last:border-b-0 last:pb-0"
+                          >
+                            <View className="min-w-0 flex-1">
+                              <Text className="text-sm font-semibold text-foreground">
+                                {product.productName}
+                              </Text>
+                              <Text className="text-xs text-muted-foreground">
+                                {product.variantLabel} - pedido x{product.requestedQuantity}, stock x{product.availableStock}
+                              </Text>
+                            </View>
+                            <Text className="text-sm font-bold text-foreground">
+                              x{product.quantity}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ))
+                  ) : (
+                    <Text className="text-sm text-muted-foreground">
+                      No hay productos faltantes para comprar.
+                    </Text>
+                  )}
+                </Card>
+              </View>
+            ) : null
+          }
           contentContainerClassName="gap-3 pb-8"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}

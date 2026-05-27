@@ -10,6 +10,8 @@ export interface PendingPurchaseProduct {
   productName: string;
   variantLabel: string;
   quantity: number;
+  requestedQuantity: number;
+  availableStock: number;
   ordersCount: number;
   costPrice: number;
   stock: number;
@@ -83,6 +85,8 @@ export async function listPendingPurchasesByProvider(): Promise<PendingPurchaseP
         productName: product.name,
         variantLabel: item.variantLabel || buildVariantLabel(variant),
         quantity: 0,
+        requestedQuantity: 0,
+        availableStock: Math.max(variant.stock - variant.reservedStock, 0),
         ordersCount: 0,
         costPrice: variant.costPrice,
         stock: variant.stock,
@@ -91,18 +95,25 @@ export async function listPendingPurchasesByProvider(): Promise<PendingPurchaseP
       orderIdsByVariant.set(item.productVariantId, new Set());
     }
 
-    pendingProduct.quantity += item.quantity;
+    pendingProduct.requestedQuantity += item.quantity;
     orderIdsByVariant.get(item.productVariantId)?.add(item.orderId);
     pendingProduct.ordersCount = orderIdsByVariant.get(item.productVariantId)?.size ?? 0;
+    pendingProduct.quantity = Math.max(
+      pendingProduct.requestedQuantity - pendingProduct.availableStock,
+      0,
+    );
   }
 
   return Array.from(providers.values())
     .map((group) => ({
       ...group,
-      products: group.products.sort((a, b) =>
-        a.productName.localeCompare(b.productName)
-          || a.variantLabel.localeCompare(b.variantLabel),
-      ),
+      products: group.products
+        .filter((product) => product.quantity > 0)
+        .sort((a, b) =>
+          a.productName.localeCompare(b.productName)
+            || a.variantLabel.localeCompare(b.variantLabel),
+        ),
     }))
+    .filter((group) => group.products.length > 0)
     .sort((a, b) => a.providerName.localeCompare(b.providerName));
 }
