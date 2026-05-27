@@ -60,14 +60,13 @@ function authSchemaError(error) {
 async function register(input) {
   const { username, password } = normalizeCredentials(input);
   const passwordHash = await bcrypt.hash(password, 12);
-  const now = Date.now();
 
   try {
     const result = await pool.query(
-      `INSERT INTO users (username, password_hash, created_at, updated_at)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (username, password_hash, updated_at)
+       VALUES ($1, $2, NOW())
        RETURNING id, username, created_at, updated_at`,
-      [username, passwordHash, now, now],
+      [username, passwordHash],
     );
     const user = publicUser(result.rows[0]);
 
