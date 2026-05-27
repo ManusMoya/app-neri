@@ -105,7 +105,7 @@ export function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               textContentType="username"
-              placeholder="nerinamartinez"
+              placeholder="usuario"
               error={errors.username}
             />
 

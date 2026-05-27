@@ -3,13 +3,9 @@ const jwt = require("jsonwebtoken");
 const pool = require("../db");
 const { getJwtSecret } = require("../middleware/auth.middleware");
 
-function createUserId() {
-  return `user_${require("crypto").randomUUID()}`;
-}
-
 function publicUser(row) {
   return {
-    id: row.id,
+    id: String(row.id),
     username: row.username,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -68,10 +64,10 @@ async function register(input) {
 
   try {
     const result = await pool.query(
-      `INSERT INTO users (id, username, password_hash, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO users (username, password_hash, created_at, updated_at)
+       VALUES ($1, $2, $3, $4)
        RETURNING id, username, created_at, updated_at`,
-      [createUserId(), username, passwordHash, now, now],
+      [username, passwordHash, now, now],
     );
     const user = publicUser(result.rows[0]);
 
