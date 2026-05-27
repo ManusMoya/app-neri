@@ -9,7 +9,7 @@ import {
 import { useRouter, type Href } from "expo-router";
 
 import { Button, Card, Input, Screen } from "@/components/ui";
-import { login as loginUser, register as createUser } from "@/services/auth.api.service";
+import { login, register } from "@/services/auth.api.service";
 
 type LoginErrors = {
   username?: string;
@@ -56,9 +56,9 @@ export function LoginScreen() {
     setIsSubmitting(true);
     try {
       if (mode === "create") {
-        await createUser(username, password);
+        await register(username, password);
       } else {
-        await loginUser(username, password);
+        await login(username, password);
       }
 
       router.replace("/dashboard" as Href);

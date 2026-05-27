@@ -13,6 +13,11 @@ export type AuthApiSession = {
   user: AuthApiUser;
 };
 
+type AuthCredentialsPayload = {
+  username: string;
+  password: string;
+};
+
 let currentSession: AuthApiSession | null = null;
 
 export function getCurrentApiSession() {
@@ -40,10 +45,17 @@ function mapApiUser(user: AuthApiUser): AuthUser {
   };
 }
 
+function toCredentialsPayload(username: string, password: string): AuthCredentialsPayload {
+  return {
+    username,
+    password,
+  };
+}
+
 export async function register(username: string, password: string) {
   const session = await apiRequest<AuthApiSession>("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify(toCredentialsPayload(username, password)),
   });
 
   return setSession(session);
@@ -52,7 +64,7 @@ export async function register(username: string, password: string) {
 export async function login(username: string, password: string) {
   const session = await apiRequest<AuthApiSession>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify(toCredentialsPayload(username, password)),
   });
 
   return setSession(session);
