@@ -2,6 +2,12 @@
   command = "npx expo export -p web"
   publish = "dist"
 
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Embedder-Policy = "credentialless"
+    Cross-Origin-Opener-Policy = "same-origin"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
