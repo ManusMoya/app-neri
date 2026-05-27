@@ -4,7 +4,11 @@ module.exports = createCrudService({
   table: "orders",
   idPrefix: "order",
   orderBy: "ordered_at DESC",
+  userScoped: true,
   searchColumns: ["status", "payment_status", "notes"],
+  scopedReferences: [
+    { column: "client_id", table: "clients" },
+  ],
   columns: [
     { name: "client_id", required: true },
     { name: "status" },

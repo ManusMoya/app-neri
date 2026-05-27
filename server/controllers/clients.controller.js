@@ -8,7 +8,7 @@ function notFound(message) {
 
 async function listClients(req, res, next) {
   try {
-    const clients = await clientsService.listClients(req.query.search || "");
+    const clients = await clientsService.listClients(req.query.search || "", req.user.id);
     res.json({ status: "ok", data: clients });
   } catch (error) {
     next(error);
@@ -17,7 +17,7 @@ async function listClients(req, res, next) {
 
 async function getClient(req, res, next) {
   try {
-    const client = await clientsService.getClientById(req.params.id);
+    const client = await clientsService.getClientById(req.params.id, req.user.id);
 
     if (!client) {
       throw notFound("Cliente no encontrado.");
@@ -31,7 +31,7 @@ async function getClient(req, res, next) {
 
 async function createClient(req, res, next) {
   try {
-    const client = await clientsService.createClient(req.body);
+    const client = await clientsService.createClient(req.body, req.user.id);
     res.status(201).json({ status: "ok", data: client });
   } catch (error) {
     next(error);
@@ -40,7 +40,7 @@ async function createClient(req, res, next) {
 
 async function updateClient(req, res, next) {
   try {
-    const client = await clientsService.updateClient(req.params.id, req.body);
+    const client = await clientsService.updateClient(req.params.id, req.body, req.user.id);
 
     if (!client) {
       throw notFound("Cliente no encontrado.");
@@ -54,7 +54,7 @@ async function updateClient(req, res, next) {
 
 async function deleteClient(req, res, next) {
   try {
-    const client = await clientsService.deleteClient(req.params.id);
+    const client = await clientsService.deleteClient(req.params.id, req.user.id);
 
     if (!client) {
       throw notFound("Cliente no encontrado.");

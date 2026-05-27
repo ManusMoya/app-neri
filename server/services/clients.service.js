@@ -56,12 +56,16 @@ function normalizeClientPayload(payload, { partial = false } = {}) {
   return result;
 }
 
-async function listClients(searchTerm = "") {
+async function listClients(searchTerm = "", userId) {
   const normalized = searchTerm.trim();
 
   if (!normalized) {
     const result = await pool.query(
-      "SELECT id, name, phone, whatsapp_link, debt, created_at FROM clients ORDER BY created_at DESC",
+      `SELECT id, name, phone, whatsapp_link, debt, created_at
+       FROM clients
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId],
     );
 
     return result.rows;
@@ -71,37 +75,39 @@ async function listClients(searchTerm = "") {
   const result = await pool.query(
     `SELECT id, name, phone, whatsapp_link, debt, created_at
      FROM clients
-     WHERE name ILIKE $1 OR phone ILIKE $1
+     WHERE user_id = $1 AND (name ILIKE $2 OR phone ILIKE $2)
      ORDER BY created_at DESC`,
-    [pattern],
+    [userId, pattern],
   );
 
   return result.rows;
 }
 
-async function getClientById(id) {
+async function getClientById(id, userId) {
   const result = await pool.query(
-    "SELECT id, name, phone, whatsapp_link, debt, created_at FROM clients WHERE id = $1",
-    [id],
+    `SELECT id, name, phone, whatsapp_link, debt, created_at
+     FROM clients
+     WHERE id = $1 AND user_id = $2`,
+    [id, userId],
   );
 
   return result.rows[0] || null;
 }
 
-async function createClient(payload) {
+async function createClient(payload, userId) {
   const client = normalizeClientPayload(payload);
   const now = Date.now();
   const result = await pool.query(
-    `INSERT INTO clients (id, name, phone, whatsapp_link, debt, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO clients (id, user_id, name, phone, whatsapp_link, debt, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id, name, phone, whatsapp_link, debt, created_at`,
-    [client.id, client.name, client.phone, client.whatsapp_link, client.debt, now],
+    [client.id, userId, client.name, client.phone, client.whatsapp_link, client.debt, now],
   );
 
   return result.rows[0];
 }
 
-async function updateClient(id, payload) {
+async function updateClient(id, payload, userId) {
   const client = normalizeClientPayload(payload, { partial: true });
   const fields = [];
   const values = [];
@@ -114,14 +120,15 @@ async function updateClient(id, payload) {
   }
 
   if (fields.length === 0) {
-    return getClientById(id);
+    return getClientById(id, userId);
   }
 
   values.push(id);
+  values.push(userId);
   const result = await pool.query(
     `UPDATE clients
      SET ${fields.join(", ")}
-     WHERE id = $${values.length}
+     WHERE id = $${values.length - 1} AND user_id = $${values.length}
      RETURNING id, name, phone, whatsapp_link, debt, created_at`,
     values,
   );
@@ -129,10 +136,12 @@ async function updateClient(id, payload) {
   return result.rows[0] || null;
 }
 
-async function deleteClient(id) {
+async function deleteClient(id, userId) {
   const result = await pool.query(
-    "DELETE FROM clients WHERE id = $1 RETURNING id, name, phone, whatsapp_link, debt, created_at",
-    [id],
+    `DELETE FROM clients
+     WHERE id = $1 AND user_id = $2
+     RETURNING id, name, phone, whatsapp_link, debt, created_at`,
+    [id, userId],
   );
 
   return result.rows[0] || null;

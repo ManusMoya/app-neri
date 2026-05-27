@@ -1,7 +1,10 @@
 const express = require("express");
+const { requireAuth } = require("../middleware/auth.middleware");
 
 function createCrudRouter(controller) {
   const router = express.Router();
+
+  router.use(requireAuth);
 
   router.get("/", controller.list);
   router.get("/:id", controller.get);

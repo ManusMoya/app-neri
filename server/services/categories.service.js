@@ -4,6 +4,7 @@ module.exports = createCrudService({
   table: "categories",
   idPrefix: "category",
   orderBy: "created_at DESC",
+  userScoped: true,
   searchColumns: ["name", "description"],
   columns: [
     { name: "name", required: true },

@@ -8,7 +8,7 @@ function createCrudController(entityName, service) {
   return {
     async list(req, res, next) {
       try {
-        const rows = await service.list(req.query);
+        const rows = await service.list(req.query, req.user.id);
         res.json({ status: "ok", data: rows });
       } catch (error) {
         next(error);
@@ -17,7 +17,7 @@ function createCrudController(entityName, service) {
 
     async get(req, res, next) {
       try {
-        const row = await service.getById(req.params.id);
+        const row = await service.getById(req.params.id, req.user.id);
 
         if (!row) {
           throw notFound(entityName);
@@ -31,7 +31,7 @@ function createCrudController(entityName, service) {
 
     async create(req, res, next) {
       try {
-        const row = await service.create(req.body);
+        const row = await service.create(req.body, req.user.id);
         res.status(201).json({ status: "ok", data: row });
       } catch (error) {
         next(error);
@@ -40,7 +40,7 @@ function createCrudController(entityName, service) {
 
     async update(req, res, next) {
       try {
-        const row = await service.update(req.params.id, req.body);
+        const row = await service.update(req.params.id, req.body, req.user.id);
 
         if (!row) {
           throw notFound(entityName);
@@ -54,7 +54,7 @@ function createCrudController(entityName, service) {
 
     async remove(req, res, next) {
       try {
-        const row = await service.remove(req.params.id);
+        const row = await service.remove(req.params.id, req.user.id);
 
         if (!row) {
           throw notFound(entityName);

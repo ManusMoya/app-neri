@@ -4,6 +4,15 @@ module.exports = createCrudService({
   table: "purchase_items",
   idPrefix: "purchase_item",
   orderBy: "created_at DESC",
+  owner: {
+    table: "purchases",
+    alias: "owner_purchase",
+    localColumn: "purchase_id",
+    idColumn: "id",
+  },
+  scopedReferences: [
+    { column: "purchase_id", table: "purchases" },
+  ],
   columns: [
     { name: "purchase_id", required: true },
     { name: "product_variant_id", required: true },
