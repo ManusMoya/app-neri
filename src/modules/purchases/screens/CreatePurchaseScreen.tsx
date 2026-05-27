@@ -3,52 +3,23 @@ import { ScrollView, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useRouter, type Href } from "expo-router";
 
-import { getSQLiteConnection } from "@/database";
-import { requireCurrentUser } from "@/services/auth.service";
 import { Button, Card, CurrencyText, Header, Input, Screen, ScreenBody } from "@/components/ui";
 import { ProductSelector } from "@/modules/orders/components/ProductSelector";
+import {
+  listPendingPurchasesByProvider,
+  type PendingPurchaseProduct,
+} from "@/services/pending-purchases.service";
 
 import { ProviderSelector } from "../components/ProviderSelector";
 import { usePurchaseForm } from "../hooks/usePurchaseForm";
 
-type PendingPurchaseRow = {
-  provider_id: string;
-  product_variant_id: string;
-  product_name: string;
-  variant_label: string | null;
-  quantity: number;
-  cost_price: number;
-  stock: number;
-};
-
-async function loadPendingPurchaseRows(providerId?: string | null) {
+async function loadPendingPurchaseRows(providerId?: string | null): Promise<PendingPurchaseProduct[]> {
   if (!providerId) {
     return [];
   }
 
-  const sqlite = await getSQLiteConnection();
-  const user = requireCurrentUser();
-
-  return sqlite.getAllAsync<PendingPurchaseRow>(
-    `select
-      providers.id as provider_id,
-      order_items.product_variant_id,
-      order_items.product_name,
-      order_items.variant_label,
-      sum(order_items.quantity) as quantity,
-      product_variants.cost_price,
-      product_variants.stock
-    from order_items
-    inner join orders on orders.id = order_items.order_id
-    inner join product_variants on product_variants.id = order_items.product_variant_id
-    inner join products on products.id = product_variants.product_id
-    inner join providers on providers.id = products.provider_id
-    where orders.status = 'draft' and orders.user_id = ? and providers.id = ?
-    group by providers.id, order_items.product_variant_id, order_items.product_name, order_items.variant_label
-    order by order_items.product_name asc`,
-    user.id,
-    providerId,
-  );
+  const groups = await listPendingPurchasesByProvider();
+  return groups.find((group) => group.providerId === providerId)?.products ?? [];
 }
 
 export function CreatePurchaseScreen() {
@@ -74,11 +45,31 @@ export function CreatePurchaseScreen() {
 
   const [providerSelectorVisible, setProviderSelectorVisible] = useState(false);
   const [productSelectorVisible, setProductSelectorVisible] = useState(false);
-  const [pendingRows, setPendingRows] = useState<PendingPurchaseRow[]>([]);
+  const [pendingRows, setPendingRows] = useState<PendingPurchaseProduct[]>([]);
   const selectedItemIds = useMemo(
     () => new Set(items.map((item) => item.productVariantId)),
     [items],
   );
+
+  const addPendingProduct = (product: PendingPurchaseProduct) => {
+    addItemWithQuantity(
+      {
+        id: product.productVariantId,
+        productName: product.productName,
+        costPrice: product.costPrice,
+        stock: product.stock,
+      },
+      product.quantity,
+    );
+  };
+
+  const addAllPendingProducts = () => {
+    for (const product of pendingRows) {
+      if (!selectedItemIds.has(product.productVariantId)) {
+        addPendingProduct(product);
+      }
+    }
+  };
 
   const reloadPendingRows = useCallback(async () => {
     setPendingRows(await loadPendingPurchaseRows(selectedProvider?.id));
@@ -131,23 +122,31 @@ export function CreatePurchaseScreen() {
 
           {selectedProvider && pendingRows.length > 0 ? (
             <Card className="mb-4 gap-3 p-4">
-              <Text className="text-lg font-bold text-foreground">
-                Pedidos pendientes para comprar
-              </Text>
+              <View className="flex-row items-center justify-between gap-3">
+                <Text className="min-w-0 flex-1 text-lg font-bold text-foreground">
+                  Pedidos pendientes para comprar
+                </Text>
+                <Button
+                  title="Agregar todos"
+                  size="sm"
+                  variant="outline"
+                  onPress={addAllPendingProducts}
+                />
+              </View>
               {pendingRows.map((row) => {
-                const alreadyAdded = selectedItemIds.has(row.product_variant_id);
+                const alreadyAdded = selectedItemIds.has(row.productVariantId);
 
                 return (
                   <View
-                    key={row.product_variant_id}
+                    key={row.productVariantId}
                     className="flex-row items-center justify-between gap-3 border-b border-border py-3 last:border-b-0"
                   >
                     <View className="min-w-0 flex-1">
                       <Text className="font-medium text-foreground">
-                        {row.product_name}
+                        {row.productName}
                       </Text>
                       <Text className="text-xs text-muted-foreground">
-                        {row.variant_label || "Estandar"} · pendiente x{row.quantity}
+                        {row.variantLabel} - pendiente x{row.quantity}
                       </Text>
                     </View>
                     <Button
@@ -155,17 +154,7 @@ export function CreatePurchaseScreen() {
                       size="sm"
                       variant={alreadyAdded ? "secondary" : "outline"}
                       disabled={alreadyAdded}
-                      onPress={() =>
-                        addItemWithQuantity(
-                          {
-                            id: row.product_variant_id,
-                            productName: row.product_name,
-                            costPrice: row.cost_price,
-                            stock: row.stock,
-                          },
-                          row.quantity,
-                        )
-                      }
+                      onPress={() => addPendingProduct(row)}
                     />
                   </View>
                 );
@@ -279,3 +268,4 @@ export function CreatePurchaseScreen() {
     </Screen>
   );
 }
+

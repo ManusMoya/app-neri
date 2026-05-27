@@ -1,6 +1,8 @@
 import type { Purchase, PurchaseItem } from "@/database/schema";
 import { createId } from "@/utils/ids";
 import { apiRequest, fromTimestamp, toTimestamp } from "./api-client";
+import { createPurchaseItem } from "./purchase-items.api.service";
+import { getProductVariant, updateProductVariant } from "./product-variants.api.service";
 
 export interface CreatePurchaseItemInput {
   productVariantId: string;
@@ -57,6 +59,27 @@ function mapPurchase(row: PurchaseRow): Purchase {
   };
 }
 
+function distributeShipping(items: CreatePurchaseItemInput[], shippingAmount: number) {
+  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.baseCost, 0);
+
+  if (shippingAmount === 0 || subtotal === 0) {
+    return items.map(() => 0);
+  }
+
+  let allocated = 0;
+
+  return items.map((item, index) => {
+    if (index === items.length - 1) {
+      return shippingAmount - allocated;
+    }
+
+    const share = Math.round(((item.quantity * item.baseCost) / subtotal) * shippingAmount);
+    allocated += share;
+
+    return share;
+  });
+}
+
 export async function listPurchases() {
   const rows = await apiRequest<PurchaseRow[]>("/purchases");
   return rows.map(mapPurchase);
@@ -67,10 +90,11 @@ export async function createReceivedPurchase(input: CreateReceivedPurchaseInput)
   const shippingAmount = input.shippingAmount ?? 0;
   const totalAmount = subtotalAmount + shippingAmount;
   const paidAmount = input.paidAmount ?? 0;
+  const purchaseId = createId("purchase");
   const row = await apiRequest<PurchaseRow>("/purchases", {
     method: "POST",
     body: JSON.stringify({
-      id: createId("purchase"),
+      id: purchaseId,
       provider_id: input.providerId,
       status: "received",
       subtotal_amount: subtotalAmount,
@@ -84,7 +108,36 @@ export async function createReceivedPurchase(input: CreateReceivedPurchaseInput)
     }),
   });
 
-  return { purchase: mapPurchase(row), items: [] };
+  const shippingByLine = distributeShipping(input.items, shippingAmount);
+  const items = await Promise.all(input.items.map(async (item, index) => {
+    const variant = await getProductVariant(item.productVariantId);
+    const shippingCost = shippingByLine[index] ?? 0;
+    const lineTotal = item.quantity * item.baseCost + shippingCost;
+    const realCost = Math.round(lineTotal / item.quantity);
+    const nextStock = variant.stock + item.quantity;
+    const nextCost = Math.round(
+      (variant.stock * variant.costPrice + item.quantity * realCost) / nextStock,
+    );
+
+    const purchaseItem = await createPurchaseItem({
+      purchase_id: purchaseId,
+      product_variant_id: item.productVariantId,
+      quantity: item.quantity,
+      base_cost: item.baseCost,
+      shipping_cost: shippingCost,
+      real_cost: realCost,
+      line_total: lineTotal,
+    });
+
+    await updateProductVariant(item.productVariantId, {
+      stock: nextStock,
+      cost_price: nextCost,
+    });
+
+    return purchaseItem;
+  }));
+
+  return { purchase: mapPurchase(row), items };
 }
 
 export async function removePurchase(id: string) {

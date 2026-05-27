@@ -4,6 +4,7 @@ import { useFocusEffect } from "expo-router";
 import { listClients } from "@/services/clients.api.service";
 import { apiRequest } from "@/services/api-client";
 import { changeOrderStatus, OrderWorkflowStatus } from "@/services/orders.api.service";
+import { listOrderItems } from "@/services/order-items.api.service";
 import { listPayments, registerOrderPayment } from "@/services/payments.api.service";
 import type { OrderWithDetails } from "../types";
 
@@ -25,12 +26,14 @@ type OrderDetailRow = {
 };
 
 async function getOrderDetails(id: string) {
-  const [row, clients, payments] = await Promise.all([
+  const [row, clients, orderItems, payments] = await Promise.all([
     apiRequest<OrderDetailRow>(`/orders/${encodeURIComponent(id)}`),
     listClients(),
+    listOrderItems(),
     listPayments(),
   ]);
   const client = clients.find((item) => item.id === row.client_id);
+  const items = orderItems.filter((item) => item.orderId === id);
   const orderPayments = payments.filter((payment) => payment.orderId === id);
 
   if (!client) {
@@ -53,7 +56,7 @@ async function getOrderDetails(id: string) {
     createdAt: new Date(Number(row.created_at)),
     updatedAt: new Date(Number(row.updated_at)),
     client,
-    items: [],
+    items,
     payments: orderPayments,
   } satisfies OrderWithDetails;
 }

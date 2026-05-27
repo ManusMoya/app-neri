@@ -1,7 +1,10 @@
 import type { Order, OrderItem } from "@/database/schema";
 import { createId } from "@/utils/ids";
+import { buildVariantLabel } from "@/modules/products/utils";
 import { apiRequest, fromTimestamp, toTimestamp } from "./api-client";
+import { createOrderItem } from "./order-items.api.service";
 import { registerOrderPayment } from "./payments.api.service";
+import { listProducts } from "./products.api.service";
 
 export const ORDER_WORKFLOW_STATUS = {
   PENDING: "draft",
@@ -86,6 +89,12 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderWithIte
   const totalAmount = Math.max(subtotalAmount - discountAmount, 0);
   const paidAmount = Math.min(input.depositAmount ?? 0, totalAmount);
   const orderId = createId("order");
+  const products = await listProducts();
+  const variantsById = new Map(
+    products.flatMap((product) =>
+      product.variants.map((variant) => [variant.id, { product, variant }] as const),
+    ),
+  );
   const row = await apiRequest<OrderRow>("/orders", {
     method: "POST",
     body: JSON.stringify({
@@ -103,6 +112,35 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderWithIte
       ordered_at: toTimestamp(input.orderedAt),
     }),
   });
+
+  const items = await Promise.all(input.items.map(async (item) => {
+    const lookup = variantsById.get(item.productVariantId);
+
+    if (!lookup) {
+      throw new Error("No se pudo cargar la variante seleccionada.");
+    }
+
+    const unitPrice = item.unitPrice ?? lookup.variant.salePrice;
+    const unitCost = lookup.variant.costPrice;
+    const discount = item.discountAmount ?? 0;
+    const lineSubtotal = Math.max(unitPrice * item.quantity - discount, 0);
+    const lineCostTotal = unitCost * item.quantity;
+
+    return createOrderItem({
+      order_id: orderId,
+      product_variant_id: item.productVariantId,
+      product_name: lookup.product.name,
+      variant_label: buildVariantLabel(lookup.variant),
+      sku: lookup.variant.sku,
+      quantity: item.quantity,
+      unit_price: unitPrice,
+      unit_cost: unitCost,
+      discount_amount: discount,
+      line_subtotal: lineSubtotal,
+      line_cost_total: lineCostTotal,
+      profit_amount: lineSubtotal - lineCostTotal,
+    });
+  }));
 
   if (paidAmount > 0) {
     await registerOrderPayment({
@@ -122,7 +160,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderWithIte
       balanceDue: totalAmount - paidAmount,
       paymentStatus: paidAmount === 0 ? "unpaid" : paidAmount === totalAmount ? "paid" : "partial",
     },
-    items: [],
+    items,
   };
 }
 

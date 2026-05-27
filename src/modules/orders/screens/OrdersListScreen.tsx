@@ -122,52 +122,65 @@ export function OrdersListScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <OrderListItem order={item} />}
           ListHeaderComponent={
-            pendingPurchases.length > 0 ? (
+            filter === "pending" ? (
               <View className="mb-4 gap-3">
+                <Card className="gap-3">
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text className="min-w-0 flex-1 text-base font-bold text-foreground">
+                      Productos pendientes por proveedor
+                    </Text>
+                    <Button
+                      title="Copiar todo"
+                      size="sm"
+                      variant="outline"
+                      onPress={handleCopyPendingPurchases}
+                    />
+                  </View>
+                  {pendingPurchases.length > 0 ? (
+                    pendingPurchases.map((group) => (
+                      <View key={group.providerId} className="gap-3 border-t border-border pt-3">
+                        <View className="flex-row items-center justify-between gap-3">
+                          <Text className="min-w-0 flex-1 text-sm font-bold text-foreground">
+                            {group.providerName}
+                          </Text>
+                          <Button
+                            title="Copiar"
+                            size="sm"
+                            variant="outline"
+                            onPress={() => handleCopyProviderPendingPurchases(group)}
+                          />
+                        </View>
+                        {group.products.map((product) => (
+                          <View
+                            key={product.productVariantId}
+                            className="flex-row items-start justify-between gap-3 border-b border-border pb-2 last:border-b-0 last:pb-0"
+                          >
+                            <View className="min-w-0 flex-1">
+                              <Text className="text-sm font-semibold text-foreground">
+                                {product.productName}
+                              </Text>
+                              <Text className="text-xs text-muted-foreground">
+                                {product.variantLabel} - {product.ordersCount} pedido(s)
+                              </Text>
+                            </View>
+                            <Text className="text-sm font-bold text-foreground">
+                              x{product.quantity}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ))
+                  ) : (
+                    <Text className="text-sm text-muted-foreground">
+                      No hay productos pendientes para comprar.
+                    </Text>
+                  )}
+                </Card>
                 <View className="flex-row items-center justify-between gap-3">
                   <Text className="min-w-0 flex-1 text-base font-bold text-foreground">
-                    Pendientes por comprar
+                    Historial de pedidos pendientes
                   </Text>
-                  <Button
-                    title="Copiar WhatsApp"
-                    size="sm"
-                    variant="outline"
-                    onPress={handleCopyPendingPurchases}
-                  />
                 </View>
-                {pendingPurchases.map((group) => (
-                  <Card key={group.providerId} className="gap-3">
-                    <View className="flex-row items-center justify-between gap-3">
-                      <Text className="min-w-0 flex-1 text-sm font-bold text-foreground">
-                        {group.providerName}
-                      </Text>
-                      <Button
-                        title="Copiar"
-                        size="sm"
-                        variant="outline"
-                        onPress={() => handleCopyProviderPendingPurchases(group)}
-                      />
-                    </View>
-                    {group.products.map((product) => (
-                      <View
-                        key={`${product.productName}-${product.variantLabel}`}
-                        className="flex-row items-start justify-between gap-3 border-b border-border pb-2 last:border-b-0 last:pb-0"
-                      >
-                        <View className="min-w-0 flex-1">
-                          <Text className="text-sm font-semibold text-foreground">
-                            {product.productName}
-                          </Text>
-                          <Text className="text-xs text-muted-foreground">
-                            {product.variantLabel} - {product.ordersCount} pedido(s)
-                          </Text>
-                        </View>
-                        <Text className="text-sm font-bold text-foreground">
-                          x{product.quantity}
-                        </Text>
-                      </View>
-                    ))}
-                  </Card>
-                ))}
               </View>
             ) : null
           }

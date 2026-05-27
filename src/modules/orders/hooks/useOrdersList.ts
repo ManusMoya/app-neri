@@ -3,21 +3,15 @@ import { useFocusEffect } from "expo-router";
 
 import { listClients } from "@/services/clients.api.service";
 import { listOrders } from "@/services/orders.api.service";
+import {
+  listPendingPurchasesByProvider,
+  type PendingPurchaseProduct,
+  type PendingPurchaseProviderGroup,
+} from "@/services/pending-purchases.service";
 
 import type { OrderListRecord } from "../types";
 
-export interface PendingPurchaseProduct {
-  productName: string;
-  variantLabel: string;
-  quantity: number;
-  ordersCount: number;
-}
-
-export interface PendingPurchaseProviderGroup {
-  providerId: string;
-  providerName: string;
-  products: PendingPurchaseProduct[];
-}
+export type { PendingPurchaseProduct, PendingPurchaseProviderGroup };
 
 async function listOrdersWithClient() {
   const [orders, clients] = await Promise.all([listOrders(), listClients()]);
@@ -34,10 +28,6 @@ async function listOrdersWithClient() {
       client,
     } satisfies OrderListRecord;
   });
-}
-
-async function listPendingPurchasesByProvider(): Promise<PendingPurchaseProviderGroup[]> {
-  return [];
 }
 
 export function useOrdersList() {
