@@ -5,6 +5,8 @@ import { Button, Card, CurrencyText, Input } from "@/components/ui";
 import { useProductsList } from "@/modules/products/hooks/useProductsList";
 import type { ProductListRecord } from "@/modules/products/types";
 
+type VariantFilterKey = "model" | "color" | "size";
+
 interface ProductSelectorProps {
   onSelect: (variant: any) => void;
   onClose: () => void;
@@ -30,6 +32,7 @@ export function ProductSelector({
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [openVariantFilter, setOpenVariantFilter] = useState<VariantFilterKey | null>(null);
 
   const selectableProducts = useMemo(
     () => products
@@ -67,6 +70,7 @@ export function ProductSelector({
     setSelectedModel(null);
     setSelectedColor(null);
     setSelectedSize(null);
+    setOpenVariantFilter(null);
   };
 
   const goBackToProducts = () => {
@@ -136,6 +140,56 @@ export function ProductSelector({
     variantSearchTerm || selectedModel || selectedColor || selectedSize,
   );
 
+  const renderVariantFilter = (
+    key: VariantFilterKey,
+    label: string,
+    value: string | null,
+    options: string[],
+    onSelectOption: (value: string | null) => void,
+  ) => {
+    const isOpen = openVariantFilter === key;
+
+    return (
+      <View className="min-w-[104px] flex-1">
+        <Pressable
+          accessibilityRole="button"
+          className="min-h-12 justify-center rounded-md border border-border bg-background px-3"
+          onPress={() => setOpenVariantFilter((current) => current === key ? null : key)}
+        >
+          <Text className="text-xs font-semibold text-muted-foreground">{label}</Text>
+          <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
+            {value || "Todos"}
+          </Text>
+        </Pressable>
+        {isOpen ? (
+          <View className="mt-2 overflow-hidden rounded-md border border-border bg-background">
+            <Pressable
+              className="border-b border-border px-3 py-3"
+              onPress={() => {
+                onSelectOption(null);
+                setOpenVariantFilter(null);
+              }}
+            >
+              <Text className="text-sm font-medium text-foreground">Todos</Text>
+            </Pressable>
+            {options.map((option) => (
+              <Pressable
+                key={`${key}-${option}`}
+                className="border-b border-border px-3 py-3 last:border-b-0"
+                onPress={() => {
+                  onSelectOption(option);
+                  setOpenVariantFilter(null);
+                }}
+              >
+                <Text className="text-sm font-medium text-foreground">{option}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
       <View className="flex-1 bg-background">
@@ -163,45 +217,38 @@ export function ProductSelector({
                 value={variantSearchTerm}
                 onChangeText={setVariantSearchTerm}
               />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row gap-2">
-                  {variantOptions.models.map((model) => (
-                    <Button
-                      key={`model-${model}`}
-                      title={`Modelo ${model}`}
-                      size="sm"
-                      variant={selectedModel === model ? "primary" : "outline"}
-                      onPress={() => setSelectedModel((current) => current === model ? null : model)}
-                    />
-                  ))}
-                  {variantOptions.colors.map((color) => (
-                    <Button
-                      key={`color-${color}`}
-                      title={`Color ${color}`}
-                      size="sm"
-                      variant={selectedColor === color ? "primary" : "outline"}
-                      onPress={() => setSelectedColor((current) => current === color ? null : color)}
-                    />
-                  ))}
-                  {variantOptions.sizes.map((size) => (
-                    <Button
-                      key={`size-${size}`}
-                      title={`Talle ${size}`}
-                      size="sm"
-                      variant={selectedSize === size ? "primary" : "outline"}
-                      onPress={() => setSelectedSize((current) => current === size ? null : size)}
-                    />
-                  ))}
-                  {hasVariantFilters ? (
-                    <Button
-                      title="Limpiar"
-                      size="sm"
-                      variant="ghost"
-                      onPress={resetVariantFilters}
-                    />
-                  ) : null}
-                </View>
-              </ScrollView>
+              <View className="flex-row flex-wrap items-start gap-2">
+                {renderVariantFilter(
+                  "model",
+                  "Modelo",
+                  selectedModel,
+                  variantOptions.models,
+                  setSelectedModel,
+                )}
+                {renderVariantFilter(
+                  "color",
+                  "Color",
+                  selectedColor,
+                  variantOptions.colors,
+                  setSelectedColor,
+                )}
+                {renderVariantFilter(
+                  "size",
+                  "Talle",
+                  selectedSize,
+                  variantOptions.sizes,
+                  setSelectedSize,
+                )}
+                {hasVariantFilters ? (
+                  <Button
+                    title="Limpiar"
+                    size="sm"
+                    variant="ghost"
+                    className="min-w-[104px] flex-1"
+                    onPress={resetVariantFilters}
+                  />
+                ) : null}
+              </View>
             </View>
           )}
         </View>
