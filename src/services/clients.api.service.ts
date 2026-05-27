@@ -3,6 +3,7 @@ import type { ClientFormValues } from "@/modules/clients/types";
 import { buildWhatsappLink, normalizePhone } from "@/modules/clients/utils/phone";
 import { createId } from "@/utils/ids";
 import { apiRequest, fromTimestamp } from "./api-client";
+import { listOrders } from "./orders.api.service";
 
 export interface ClientDetails {
   client: Client;
@@ -55,21 +56,54 @@ export async function listClients(searchTerm = "") {
   const query = searchTerm.trim()
     ? `?search=${encodeURIComponent(searchTerm.trim())}`
     : "";
-  const rows = await apiRequest<ApiClientRow[]>(`/clients${query}`);
+  const [rows, orders] = await Promise.all([
+    apiRequest<ApiClientRow[]>(`/clients${query}`),
+    listOrders(),
+  ]);
 
-  return rows.map(mapClientRow);
+  return rows.map((row) => {
+    const client = mapClientRow(row);
+    const debt = orders
+      .filter((order) => order.clientId === client.id && order.status !== "cancelled")
+      .reduce((sum, order) => sum + order.balanceDue, 0);
+
+    return {
+      ...client,
+      debt,
+    };
+  });
 }
 
 export async function getClientDetails(id: string): Promise<ClientDetails | null> {
   try {
-    const row = await apiRequest<ApiClientRow>(`/clients/${encodeURIComponent(id)}`);
+    const [row, orders] = await Promise.all([
+      apiRequest<ApiClientRow>(`/clients/${encodeURIComponent(id)}`),
+      listOrders(),
+    ]);
     const client = mapClientRow(row);
+    const clientOrders = orders
+      .filter((order) => order.clientId === id)
+      .sort((a, b) => b.orderedAt.getTime() - a.orderedAt.getTime());
+    const debt = clientOrders
+      .filter((order) => order.status !== "cancelled")
+      .reduce((sum, order) => sum + order.balanceDue, 0);
 
     return {
-      client,
-      debt: client.debt,
-      ordersCount: 0,
-      orders: [],
+      client: {
+        ...client,
+        debt,
+      },
+      debt,
+      ordersCount: clientOrders.length,
+      orders: clientOrders.map((order) => ({
+        id: order.id,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        totalAmount: order.totalAmount,
+        paidAmount: order.paidAmount,
+        balanceDue: order.balanceDue,
+        orderedAt: order.orderedAt,
+      })),
     };
   } catch (error) {
     if (error instanceof Error && error.message === "Cliente no encontrado.") {

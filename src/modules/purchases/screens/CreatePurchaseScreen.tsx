@@ -34,8 +34,6 @@ export function CreatePurchaseScreen() {
     updateCost,
     shippingAmount,
     setShippingAmount,
-    paidAmount,
-    setPaidAmount,
     subtotal,
     total,
     isSubmitting,
@@ -232,17 +230,9 @@ export function CreatePurchaseScreen() {
                 <CurrencyText amount={total} className="text-lg font-bold text-primary" />
               </View>
             </View>
-            <View className="flex-row items-center justify-between gap-3">
-              <Text className="text-muted-foreground">Monto pagado</Text>
-              <View className="w-28">
-                <Input
-                  keyboardType="numeric"
-                  value={paidAmount.toString()}
-                  onChangeText={(value) => setPaidAmount(Number(value) || 0)}
-                  placeholder="0"
-                />
-              </View>
-            </View>
+            <Text className="text-xs text-muted-foreground">
+              La compra se registra como egreso por el total calculado.
+            </Text>
           </Card>
 
           <Button

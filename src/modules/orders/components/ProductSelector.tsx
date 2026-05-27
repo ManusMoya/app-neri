@@ -4,6 +4,7 @@ import { FlatList, Modal, Pressable, ScrollView, Text, View } from "react-native
 import { Button, Card, CurrencyText, Input } from "@/components/ui";
 import { useProductsList } from "@/modules/products/hooks/useProductsList";
 import type { ProductListRecord } from "@/modules/products/types";
+import { useProvidersList } from "@/modules/providers/hooks/useProvidersList";
 
 type VariantFilterKey = "model" | "color" | "size";
 
@@ -26,7 +27,9 @@ export function ProductSelector({
   providerId,
   stockOnly = false,
 }: ProductSelectorProps) {
-  const { products, searchTerm, setSearchTerm } = useProductsList(providerId);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | undefined>(providerId);
+  const { providers } = useProvidersList();
+  const { products, searchTerm, setSearchTerm } = useProductsList(selectedProviderId);
   const [selectedProduct, setSelectedProduct] = useState<ProductListRecord | null>(null);
   const [variantSearchTerm, setVariantSearchTerm] = useState("");
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -81,6 +84,7 @@ export function ProductSelector({
   const handleClose = () => {
     setSelectedProduct(null);
     resetVariantFilters();
+    setSelectedProviderId(providerId);
     onClose();
   };
 
@@ -205,11 +209,34 @@ export function ProductSelector({
             />
           </View>
           {!selectedProduct ? (
-            <Input
-              placeholder="Buscar por nombre..."
-              value={searchTerm}
-              onChangeText={setSearchTerm}
-            />
+            <View className="gap-3">
+              <Input
+                placeholder="Buscar por nombre..."
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+              />
+              {!providerId ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View className="flex-row gap-2">
+                    <Button
+                      title="Todos"
+                      size="sm"
+                      variant={!selectedProviderId ? "primary" : "outline"}
+                      onPress={() => setSelectedProviderId(undefined)}
+                    />
+                    {providers.map((provider) => (
+                      <Button
+                        key={provider.id}
+                        title={provider.name}
+                        size="sm"
+                        variant={selectedProviderId === provider.id ? "primary" : "outline"}
+                        onPress={() => setSelectedProviderId(provider.id)}
+                      />
+                    ))}
+                  </View>
+                </ScrollView>
+              ) : null}
+            </View>
           ) : (
             <View className="gap-3">
               <Input

@@ -10,7 +10,6 @@ export function usePurchaseForm() {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [items, setItems] = useState<(CreatePurchaseItemInput & { variant: any })[]>([]);
   const [shippingAmount, setShippingAmount] = useState(0);
-  const [paidAmount, setPaidAmount] = useState(0);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +81,7 @@ export function usePurchaseForm() {
         providerId,
         items: items.map(({ variant, ...rest }) => rest),
         shippingAmount,
-        paidAmount,
+        paidAmount: total,
         notes: notes.trim() || undefined,
       };
 
@@ -108,8 +107,6 @@ export function usePurchaseForm() {
     updateCost,
     shippingAmount,
     setShippingAmount,
-    paidAmount,
-    setPaidAmount,
     notes,
     setNotes,
     subtotal,

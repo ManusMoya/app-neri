@@ -1,5 +1,5 @@
 import { Controller } from "react-hook-form";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { Button, Card, Input, SectionTitle } from "@/components/ui";
@@ -7,12 +7,22 @@ import type { Provider } from "@/database/schema";
 
 import type { useProductForm } from "../hooks";
 import { useVariantForm } from "../hooks";
+import type { ProductFormValues } from "../types";
 
 interface ProductFormProps {
   formState: ReturnType<typeof useProductForm>;
   providers: Provider[];
   submitLabel: string;
 }
+
+type VariantGroup = {
+  color: string;
+  costPrice: number;
+  indices: number[];
+  model: string;
+  salePrice: number;
+  sizes: string[];
+};
 
 function getErrorMessage(error: unknown) {
   if (error && typeof error === "object" && "message" in error) {
@@ -22,15 +32,93 @@ function getErrorMessage(error: unknown) {
   return undefined;
 }
 
+function parseSizesInput(value: string) {
+  const normalized = value.trim().replace(/^talles?\s*/i, "").replace(/^talle\/s\s*/i, "");
+  const rangeMatch = normalized.match(/^(\d+)\s*-\s*(\d+)$/);
+
+  if (rangeMatch) {
+    const start = Number(rangeMatch[1]);
+    const end = Number(rangeMatch[2]);
+
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start > end || end - start > 80) {
+      throw new Error("La gama de talles no es valida.");
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, index) => String(start + index));
+  }
+
+  const sizes = normalized
+    .split(/[,\s]+/)
+    .map((size) => size.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(sizes));
+}
+
+function formatSizes(sizes: string[]) {
+  const normalized = sizes.filter(Boolean);
+
+  if (normalized.length === 0) {
+    return "";
+  }
+
+  const numericSizes = normalized.map(Number);
+  const isNumericRange = numericSizes.every(Number.isInteger)
+    && numericSizes.every((size, index) => index === 0 || size === numericSizes[index - 1] + 1);
+
+  if (isNumericRange && normalized.length > 1) {
+    return `${normalized[0]}-${normalized[normalized.length - 1]}`;
+  }
+
+  return normalized.join(", ");
+}
+
+function groupVariants(variants: ProductFormValues["variants"]) {
+  const groups = new Map<string, VariantGroup>();
+
+  variants.forEach((variant, index) => {
+    const color = variant.color ?? "";
+    const model = variant.model ?? "";
+    const size = variant.size ?? "";
+    const costPrice = variant.costPrice ?? 0;
+    const salePrice = variant.salePrice ?? 0;
+    const key = [
+      color.trim(),
+      model.trim(),
+      costPrice,
+      salePrice,
+    ].join("\u001f");
+    const group = groups.get(key) ?? {
+      color,
+      costPrice,
+      indices: [],
+      model,
+      salePrice,
+      sizes: [],
+    };
+
+    group.indices.push(index);
+    if (size.trim()) {
+      group.sizes.push(size);
+    }
+    groups.set(key, group);
+  });
+
+  return Array.from(groups.values());
+}
+
 export function ProductForm({ formState, providers, submitLabel }: ProductFormProps) {
   const { form, isSubmitting, submit, submitError } = formState;
-  const { fields, addVariant, addVariantRange, remove } = useVariantForm(form.control);
+  const { addVariant, addVariantRange, replace } = useVariantForm(form.control);
   const [rangeSize, setRangeSize] = useState("");
   const [rangeColor, setRangeColor] = useState("");
   const [rangeModel, setRangeModel] = useState("");
   const [rangeCost, setRangeCost] = useState(0);
   const [rangeSale, setRangeSale] = useState(0);
   const [rangeError, setRangeError] = useState<string | null>(null);
+  const [groupErrors, setGroupErrors] = useState<Record<number, string>>({});
+  const variants = form.watch("variants");
+  const variantGroups = useMemo(() => groupVariants(variants), [variants]);
 
   const handleAddRange = () => {
     setRangeError(null);
@@ -47,6 +135,48 @@ export function ProductForm({ formState, providers, submitLabel }: ProductFormPr
     } catch (error) {
       setRangeError(error instanceof Error ? error.message : "No se pudieron generar los talles.");
     }
+  };
+
+  const updateGroup = (
+    indices: number[],
+    patch: Partial<ProductFormValues["variants"][number]>,
+  ) => {
+    const nextVariants = form.getValues("variants").map((variant, index) =>
+      indices.includes(index) ? { ...variant, ...patch } : variant,
+    );
+    form.setValue("variants", nextVariants, { shouldDirty: true, shouldValidate: true });
+  };
+
+  const updateGroupSizes = (groupIndex: number, indices: number[], value: string) => {
+    setGroupErrors((current) => ({ ...current, [groupIndex]: "" }));
+
+    try {
+      const sizes = parseSizesInput(value);
+      const currentVariants = form.getValues("variants");
+      const base = currentVariants[indices[0]];
+      const remaining = currentVariants.filter((_, index) => !indices.includes(index));
+      const replacement = sizes.length > 0
+        ? sizes.map((size) => ({ ...base, size }))
+        : [{ ...base, size: "" }];
+
+      replace([...remaining, ...replacement]);
+    } catch (error) {
+      setGroupErrors((current) => ({
+        ...current,
+        [groupIndex]: error instanceof Error ? error.message : "No se pudo actualizar el rango.",
+      }));
+    }
+  };
+
+  const removeGroup = (indices: number[]) => {
+    const remaining = form.getValues("variants").filter((_, index) => !indices.includes(index));
+    replace(remaining.length > 0 ? remaining : [{
+      color: "",
+      costPrice: 0,
+      model: "",
+      salePrice: 0,
+      size: "",
+    }]);
   };
 
   return (
@@ -158,94 +288,60 @@ export function ProductForm({ formState, providers, submitLabel }: ProductFormPr
           <Button title="Generar talles" variant="secondary" onPress={handleAddRange} />
         </Card>
 
-        {fields.map((field, index) => (
-          <Card key={field.id} className="gap-4">
+        {variantGroups.map((group, index) => (
+          <Card key={`${group.color}-${group.model}-${group.costPrice}-${group.salePrice}-${index}`} className="gap-4">
             <View className="flex-row items-center justify-between gap-3">
-              <Text className="text-base font-bold text-foreground">Variante {index + 1}</Text>
+              <Text className="text-base font-bold text-foreground">
+                Grupo {index + 1}
+              </Text>
               <Button
                 title="Quitar"
                 size="sm"
                 variant="ghost"
-                disabled={fields.length === 1}
-                onPress={() => remove(index)}
+                disabled={variantGroups.length === 1}
+                onPress={() => removeGroup(group.indices)}
               />
             </View>
 
             <View className="gap-3">
+              <Input
+                label="Talles"
+                placeholder="Ej. 38-42 o 38, 39, 40"
+                value={formatSizes(group.sizes)}
+                onChangeText={(value) => updateGroupSizes(index, group.indices, value)}
+                error={groupErrors[index] || undefined}
+              />
               <View className="flex-row gap-3">
-                <Controller
-                  control={form.control}
-                  name={`variants.${index}.size`}
-                  render={({ field: input }) => (
-                    <Input
-                      containerClassName="flex-1"
-                      label="Talle"
-                      onBlur={input.onBlur}
-                      onChangeText={input.onChange}
-                      value={input.value}
-                    />
-                  )}
+                <Input
+                  containerClassName="flex-1"
+                  label="Color"
+                  onChangeText={(value) => updateGroup(group.indices, { color: value })}
+                  value={group.color}
                 />
-                <Controller
-                  control={form.control}
-                  name={`variants.${index}.color`}
-                  render={({ field: input }) => (
-                    <Input
-                      containerClassName="flex-1"
-                      label="Color"
-                      onBlur={input.onBlur}
-                      onChangeText={input.onChange}
-                      value={input.value}
-                    />
-                  )}
+                <Input
+                  containerClassName="flex-1"
+                  label="Modelo"
+                  onChangeText={(value) => updateGroup(group.indices, { model: value })}
+                  value={group.model}
                 />
               </View>
 
-              <Controller
-                control={form.control}
-                name={`variants.${index}.model`}
-                render={({ field: input }) => (
-                  <Input
-                    label="Modelo"
-                    onBlur={input.onBlur}
-                    onChangeText={input.onChange}
-                    value={input.value}
-                  />
-                )}
-              />
-
               <View className="flex-row gap-3">
-                <Controller
-                  control={form.control}
-                  name={`variants.${index}.costPrice`}
-                  render={({ field: input, fieldState }) => (
-                    <Input
-                      containerClassName="flex-1"
-                      error={fieldState.error?.message}
-                      inputMode="numeric"
-                      keyboardType="number-pad"
-                      label="Costo"
-                      onBlur={input.onBlur}
-                      onChangeText={(value) => input.onChange(Number(value || 0))}
-                      value={String(input.value)}
-                    />
-                  )}
+                <Input
+                  containerClassName="flex-1"
+                  inputMode="numeric"
+                  keyboardType="number-pad"
+                  label="Costo"
+                  onChangeText={(value) => updateGroup(group.indices, { costPrice: Number(value || 0) })}
+                  value={String(group.costPrice)}
                 />
-                <Controller
-                  control={form.control}
-                  name={`variants.${index}.salePrice`}
-                  render={({ field: input, fieldState }) => (
-                    <Input
-                      containerClassName="flex-1"
-                      error={fieldState.error?.message}
-                      inputMode="numeric"
-                      keyboardType="number-pad"
-                      label="Precio"
-                      onBlur={input.onBlur}
-                      onChangeText={(value) => input.onChange(Number(value || 0))}
-                      value={String(input.value)}
-                    />
-                  )}
+                <Input
+                  containerClassName="flex-1"
+                  inputMode="numeric"
+                  keyboardType="number-pad"
+                  label="Precio"
+                  onChangeText={(value) => updateGroup(group.indices, { salePrice: Number(value || 0) })}
+                  value={String(group.salePrice)}
                 />
               </View>
             </View>
