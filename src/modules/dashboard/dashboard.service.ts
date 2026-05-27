@@ -1,9 +1,20 @@
+import { Platform } from "react-native";
+
 import { getSQLiteConnection } from "@/database";
 import { requireCurrentUser } from "@/services/auth.service";
 
 import type { DashboardMetrics } from "./types";
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
+  if (Platform.OS === "web") {
+    return {
+      balance: 0,
+      totalIncome: 0,
+      totalExpenses: 0,
+      totalClientDebt: 0,
+    };
+  }
+
   const sqlite = await getSQLiteConnection();
   const user = requireCurrentUser();
 
