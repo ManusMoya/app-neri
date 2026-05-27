@@ -34,7 +34,7 @@ function normalizeCredentials({ username, password }) {
   }
 
   if (normalizedPassword.length < 6) {
-    const error = new Error("La contrasena debe tener al menos 6 caracteres.");
+    const error = new Error("La contraseña debe tener al menos 6 caracteres.");
     error.statusCode = 400;
     throw error;
   }
@@ -97,7 +97,7 @@ async function login(input) {
     const user = result.rows[0];
 
     if (!user || !(await bcrypt.compare(password, user.password_hash || ""))) {
-      const error = new Error("Usuario o contrasena incorrectos.");
+      const error = new Error("Usuario o contraseña incorrectos.");
       error.statusCode = 401;
       throw error;
     }

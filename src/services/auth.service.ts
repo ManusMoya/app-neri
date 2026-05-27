@@ -78,7 +78,7 @@ export async function loginUser(username: string, password: string) {
   );
 
   if (!row) {
-    throw new Error("Usuario o contrasena incorrectos.");
+    throw new Error("Usuario o contraseña incorrectos.");
   }
 
   currentUser = mapUser(row);
@@ -96,7 +96,7 @@ export async function createUser(username: string, password: string) {
   }
 
   if (!normalizedPassword) {
-    throw new Error("Ingresa una contrasena.");
+    throw new Error("Ingresa una contraseña.");
   }
 
   const sqlite = await getSQLiteConnection();

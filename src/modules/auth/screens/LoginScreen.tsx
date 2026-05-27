@@ -25,7 +25,7 @@ function validateLogin(username: string, password: string) {
   }
 
   if (!password.trim()) {
-    errors.password = "Ingresa tu contrasena.";
+    errors.password = "Ingresa tu contraseña.";
   }
 
   return errors;
@@ -110,7 +110,7 @@ export function LoginScreen() {
             />
 
             <Input
-              label="Contrasena"
+              label="Contraseña"
               value={password}
               onChangeText={(value) => {
                 setPassword(value);
@@ -122,7 +122,7 @@ export function LoginScreen() {
               }}
               secureTextEntry
               textContentType="password"
-              placeholder="Ingresa tu contrasena"
+              placeholder="Ingresa tu contraseña"
               error={errors.password}
             />
 
