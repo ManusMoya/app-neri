@@ -1,6 +1,7 @@
 import type { Order, OrderItem } from "@/database/schema";
 import { createId } from "@/utils/ids";
 import { apiRequest, fromTimestamp, toTimestamp } from "./api-client";
+import { registerOrderPayment } from "./payments.api.service";
 
 export const ORDER_WORKFLOW_STATUS = {
   PENDING: "draft",
@@ -24,6 +25,7 @@ export interface CreateOrderInput {
   items: CreateOrderItemInput[];
   discountAmount?: number;
   depositAmount?: number;
+  depositNotes?: string;
   notes?: string;
   status?: OrderWorkflowStatus;
   orderedAt?: Date;
@@ -90,19 +92,38 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderWithIte
       id: orderId,
       client_id: input.clientId,
       status: input.status ?? ORDER_WORKFLOW_STATUS.PENDING,
-      payment_status: paidAmount === 0 ? "unpaid" : paidAmount === totalAmount ? "paid" : "partial",
+      payment_status: "unpaid",
       subtotal_amount: subtotalAmount,
       discount_amount: discountAmount,
       total_amount: totalAmount,
-      deposit_amount: paidAmount,
-      paid_amount: paidAmount,
-      balance_due: totalAmount - paidAmount,
+      deposit_amount: 0,
+      paid_amount: 0,
+      balance_due: totalAmount,
       notes: input.notes ?? null,
       ordered_at: toTimestamp(input.orderedAt),
     }),
   });
 
-  return { order: mapOrder(row), items: [] };
+  if (paidAmount > 0) {
+    await registerOrderPayment({
+      orderId,
+      amount: paidAmount,
+      type: "deposit",
+      method: "cash",
+      notes: input.depositNotes ?? "Pago inicial",
+    });
+  }
+
+  return {
+    order: {
+      ...mapOrder(row),
+      depositAmount: paidAmount,
+      paidAmount,
+      balanceDue: totalAmount - paidAmount,
+      paymentStatus: paidAmount === 0 ? "unpaid" : paidAmount === totalAmount ? "paid" : "partial",
+    },
+    items: [],
+  };
 }
 
 export async function changeOrderStatus(orderId: string, nextStatus: OrderWorkflowStatus) {

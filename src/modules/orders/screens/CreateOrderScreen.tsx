@@ -19,6 +19,8 @@ export function CreateOrderScreen() {
     setDiscountAmount,
     depositAmount,
     setDepositAmount,
+    installmentCount,
+    setDepositInstallments,
     notes,
     setNotes,
     subtotal,
@@ -143,6 +145,23 @@ export function CreateOrderScreen() {
                 />
               </View>
             </View>
+            <View className="flex-row gap-2">
+              {[2, 3, 4].map((installments) => (
+                <Button
+                  key={installments}
+                  title={`${installments} cuotas`}
+                  size="sm"
+                  variant={installmentCount === installments ? "primary" : "outline"}
+                  onPress={() => setDepositInstallments(installments)}
+                  className="flex-1"
+                />
+              ))}
+            </View>
+            {installmentCount ? (
+              <Text className="text-xs text-muted-foreground">
+                Se registrara la cuota 1 de {installmentCount} al crear el pedido.
+              </Text>
+            ) : null}
           </Card>
 
           <Card className="mb-8 gap-2 p-4">

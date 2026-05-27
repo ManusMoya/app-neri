@@ -4,6 +4,7 @@ import { useFocusEffect } from "expo-router";
 import { listClients } from "@/services/clients.api.service";
 import { apiRequest } from "@/services/api-client";
 import { changeOrderStatus, OrderWorkflowStatus } from "@/services/orders.api.service";
+import { listPayments, registerOrderPayment } from "@/services/payments.api.service";
 import type { OrderWithDetails } from "../types";
 
 type OrderDetailRow = {
@@ -24,11 +25,13 @@ type OrderDetailRow = {
 };
 
 async function getOrderDetails(id: string) {
-  const [row, clients] = await Promise.all([
+  const [row, clients, payments] = await Promise.all([
     apiRequest<OrderDetailRow>(`/orders/${encodeURIComponent(id)}`),
     listClients(),
+    listPayments(),
   ]);
   const client = clients.find((item) => item.id === row.client_id);
+  const orderPayments = payments.filter((payment) => payment.orderId === id);
 
   if (!client) {
     throw new Error("No se pudo cargar el cliente del pedido.");
@@ -51,7 +54,7 @@ async function getOrderDetails(id: string) {
     updatedAt: new Date(Number(row.updated_at)),
     client,
     items: [],
-    payments: [],
+    payments: orderPayments,
   } satisfies OrderWithDetails;
 }
 
@@ -114,7 +117,16 @@ export function useOrderDetails(id: string) {
         throw new Error("Pedido no encontrado.");
       }
 
-      throw new Error("El registro de pagos todavia no esta conectado a la API cloud.");
+      await registerOrderPayment({
+        orderId: order.id,
+        amount,
+        method,
+        type: amount >= order.balanceDue ? "final" : "partial",
+        notes,
+      });
+      await loadOrder();
+      setError(null);
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al registrar el pago.");
       return false;

@@ -11,6 +11,7 @@ export function useOrderForm() {
   const [items, setItems] = useState<(CreateOrderItemInput & { variant: any })[]>([]);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [depositAmount, setDepositAmount] = useState(0);
+  const [installmentCount, setInstallmentCount] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +59,11 @@ export function useOrderForm() {
   const subtotal = items.reduce((sum, item) => sum + (item.unitPrice || 0) * item.quantity, 0);
   const total = Math.max(subtotal - discountAmount, 0);
 
+  const setDepositInstallments = (installments: number) => {
+    setInstallmentCount(installments);
+    setDepositAmount(Math.ceil(total / installments));
+  };
+
   const handleSubmit = async () => {
     if (!clientId) {
       setError("Debe seleccionar un cliente.");
@@ -77,6 +83,11 @@ export function useOrderForm() {
         items: items.map(({ variant, ...rest }) => rest),
         discountAmount,
         depositAmount,
+        depositNotes: installmentCount
+          ? `Cuota 1 de ${installmentCount}`
+          : depositAmount > 0
+            ? "Pago inicial"
+            : undefined,
         notes: notes.trim() || undefined,
         status: "draft",
       };
@@ -104,7 +115,12 @@ export function useOrderForm() {
     discountAmount,
     setDiscountAmount,
     depositAmount,
-    setDepositAmount,
+    setDepositAmount: (amount: number) => {
+      setDepositAmount(amount);
+      setInstallmentCount(null);
+    },
+    installmentCount,
+    setDepositInstallments,
     notes,
     setNotes,
     subtotal,
