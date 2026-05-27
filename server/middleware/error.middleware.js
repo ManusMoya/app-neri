@@ -10,12 +10,22 @@ function errorHandler(error, req, res, next) {
     return next(error);
   }
 
-  const statusCode = error.statusCode || 500;
+  console.error("API ERROR:", error);
 
-  res.status(statusCode).json({
+  const statusCode = error.statusCode || 500;
+  const message = error.message || "Error interno del servidor.";
+  const payload = {
     status: "error",
-    message: error.message || "Error interno del servidor.",
-  });
+    message,
+    code: error.code,
+    detail: error.detail,
+  };
+
+  if (process.env.EXPOSE_ERROR_STACK === "true") {
+    payload.stack = error.stack;
+  }
+
+  res.status(statusCode).json(payload);
 }
 
 module.exports = {
