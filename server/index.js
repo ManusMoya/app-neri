@@ -30,6 +30,22 @@ async function runStartupMigrations() {
     ADD COLUMN IF NOT EXISTS user_id TEXT;
   `);
 
+  const userIdColumn = await pool.query(`
+    SELECT data_type
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'categories'
+      AND column_name = 'user_id';
+  `);
+
+  if (!["text", "character varying"].includes(userIdColumn.rows[0]?.data_type)) {
+    await pool.query(`
+      ALTER TABLE categories
+      ALTER COLUMN user_id TYPE TEXT
+      USING NULLIF(user_id::TEXT, '');
+    `);
+  }
+
   await pool.query(`
     UPDATE categories
     SET user_id = 'user_neri'
