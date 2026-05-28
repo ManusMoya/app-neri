@@ -70,9 +70,17 @@ export function ProductsListScreen() {
 
   const openProduct = useCallback(
     (id: string) => {
+      if (filter === "stock") {
+        router.push({
+          pathname: "/products/[id]",
+          params: { id, view: "stock" },
+        } as Href);
+        return;
+      }
+
       router.push(`/products/${id}` as Href);
     },
-    [router],
+    [filter, router],
   );
 
   const renderProduct = useCallback(

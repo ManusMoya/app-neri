@@ -3,8 +3,10 @@ import { Alert, Platform, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 
 import {
+  Badge,
   Button,
   Card,
+  CurrencyText,
   EmptyState,
   Header,
   LoadingSpinner,
@@ -12,19 +14,116 @@ import {
   ScreenBody,
   SectionTitle,
 } from "@/components/ui";
+import type { ProductVariant } from "@/database/schema";
 import { deleteProduct } from "@/services/products.api.service";
 
-import { ProductMetricsGrid, VariantCard } from "../components";
+import { ProductMetricsGrid } from "../components";
 import { useProductDetails } from "../hooks";
+import {
+  buildVariantLabel,
+  getAvailableStock,
+  getProductMetrics,
+  getStockStatus,
+  getStockStatusLabel,
+  getStockStatusTone,
+} from "../utils";
 
 function getIdParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function getVariantGroupKey(variant: ProductVariant) {
+  return [
+    variant.model?.trim() || "Sin modelo",
+    variant.color?.trim() || "Sin color",
+    variant.costPrice,
+    variant.salePrice,
+  ].join("|");
+}
+
+function getVariantGroupTitle(variant: ProductVariant) {
+  const title = [variant.model, variant.color].filter(Boolean).join(" / ");
+
+  return title || "Variante base";
+}
+
+function groupVariants(variants: ProductVariant[]) {
+  const groups = new Map<string, { title: string; variants: ProductVariant[] }>();
+
+  for (const variant of variants) {
+    const key = getVariantGroupKey(variant);
+    const group = groups.get(key) ?? {
+      title: getVariantGroupTitle(variant),
+      variants: [],
+    };
+
+    group.variants.push(variant);
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.values());
+}
+
+function VariantSummaryCard({ variants, title }: { title: string; variants: ProductVariant[] }) {
+  const firstVariant = variants[0];
+  const availableStock = variants.reduce((sum, variant) => sum + getAvailableStock(variant), 0);
+  const status = getStockStatus({
+    stock: availableStock,
+    reservedStock: 0,
+    minimumStock: 0,
+  });
+
+  return (
+    <Card className="gap-3">
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="min-w-0 flex-1 gap-1">
+          <Text className="text-base font-bold text-foreground" numberOfLines={1}>
+            {title}
+          </Text>
+          <View className="flex-row flex-wrap gap-x-3 gap-y-1">
+            <Text className="text-xs font-semibold text-muted-foreground">
+              Disp. {availableStock}
+            </Text>
+            {firstVariant ? (
+              <>
+                <CurrencyText amount={firstVariant.costPrice} className="text-xs" />
+                <Text className="text-xs font-semibold text-muted-foreground">/</Text>
+                <CurrencyText amount={firstVariant.salePrice} className="text-xs" />
+              </>
+            ) : null}
+          </View>
+        </View>
+        <Badge label={getStockStatusLabel(status)} tone={getStockStatusTone(status)} />
+      </View>
+
+      <View className="flex-row flex-wrap gap-2">
+        {variants.map((variant) => {
+          const variantStock = getAvailableStock(variant);
+          const label = variant.size?.trim()
+            ? `Talle ${variant.size.trim()}`
+            : buildVariantLabel(variant);
+
+          return (
+            <View
+              key={variant.id}
+              className="rounded-md border border-border bg-background px-3 py-2"
+            >
+              <Text className="text-xs font-semibold text-foreground">{label}</Text>
+              <Text className="text-xs text-muted-foreground">Stock {variantStock}</Text>
+            </View>
+          );
+        })}
+      </View>
+    </Card>
+  );
+}
+
 export function ProductDetailsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const params = useLocalSearchParams<{ id?: string | string[]; view?: string | string[] }>();
   const id = getIdParam(params.id) ?? "";
+  const detailView = getIdParam(params.view);
+  const isStockView = detailView === "stock";
   const { error, isLoading, product, reload } = useProductDetails(id);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -106,12 +205,17 @@ export function ProductDetailsScreen() {
   }
 
   const activeVariants = product.variants.filter((variant) => variant.isActive);
+  const visibleVariants = isStockView
+    ? activeVariants.filter((variant) => getAvailableStock(variant) > 0)
+    : activeVariants;
+  const visibleMetrics = getProductMetrics(visibleVariants);
+  const variantGroups = groupVariants(visibleVariants);
 
   return (
     <Screen>
       <Header
         title={product.name}
-        subtitle={product.provider.name}
+        subtitle={isStockView ? `${product.provider.name} - solo stock disponible` : product.provider.name}
         rightSlot={
           <View className="flex-row gap-2">
             <Button
@@ -139,9 +243,9 @@ export function ProductDetailsScreen() {
 
       <ScreenBody>
         <ProductMetricsGrid
-          stockTotal={product.stockTotal}
-          inventoryValue={product.inventoryValue}
-          averageMargin={product.averageMargin}
+          stockTotal={visibleMetrics.stockTotal}
+          inventoryValue={visibleMetrics.inventoryValue}
+          averageMargin={visibleMetrics.averageMargin}
         />
 
         <Card className="gap-3">
@@ -159,17 +263,29 @@ export function ProductDetailsScreen() {
 
         <View className="gap-3">
           <SectionTitle
-            title="Variantes"
-            subtitle="Stock disponible, precios y margen por variante."
+            title={isStockView ? "Stock disponible" : "Variantes"}
+            subtitle={
+              isStockView
+                ? "Modelos, colores y talles con stock positivo."
+                : "Resumen agrupado por modelo, color y precio."
+            }
           />
-          {activeVariants.length > 0 ? (
-            activeVariants.map((variant) => (
-              <VariantCard key={variant.id} variant={variant} />
+          {variantGroups.length > 0 ? (
+            variantGroups.map((group) => (
+              <VariantSummaryCard
+                key={`${group.title}-${group.variants.map((variant) => variant.id).join("-")}`}
+                title={group.title}
+                variants={group.variants}
+              />
             ))
           ) : (
             <EmptyState
-              title="Sin variantes activas"
-              description="Edita el producto para agregar variantes de stock."
+              title={isStockView ? "Sin variantes con stock" : "Sin variantes activas"}
+              description={
+                isStockView
+                  ? "Este producto no tiene modelos o talles disponibles."
+                  : "Edita el producto para agregar variantes de stock."
+              }
             />
           )}
         </View>

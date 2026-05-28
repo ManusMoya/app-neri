@@ -5,7 +5,6 @@ import type { ProductVariant } from "@/database/schema";
 
 import {
   buildVariantLabel,
-  getAvailableStock,
   getStockStatus,
   getStockStatusLabel,
   getStockStatusTone,
