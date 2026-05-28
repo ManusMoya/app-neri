@@ -18,6 +18,43 @@ const { errorHandler, notFound } = require("./middleware/error.middleware");
 
 const app = express();
 
+async function runStartupMigrations() {
+  const categoriesTable = await pool.query("SELECT to_regclass('public.categories') AS name");
+
+  if (!categoriesTable.rows[0]?.name) {
+    return;
+  }
+
+  await pool.query(`
+    ALTER TABLE categories
+    ADD COLUMN IF NOT EXISTS user_id TEXT;
+  `);
+
+  await pool.query(`
+    UPDATE categories
+    SET user_id = 'user_neri'
+    WHERE user_id IS NULL OR user_id = '';
+  `);
+
+  await pool.query(`
+    ALTER TABLE categories
+    DROP CONSTRAINT IF EXISTS categories_name_key;
+  `);
+
+  await pool.query(`
+    DROP INDEX IF EXISTS categories_name_unique;
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS categories_user_id_idx ON categories (user_id);
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS categories_user_name_unique
+    ON categories (user_id, name);
+  `);
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -96,12 +133,15 @@ app.get("/create-main-tables", async (req, res) => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS categories (
         id TEXT PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE,
+        user_id TEXT,
+        name TEXT NOT NULL,
         description TEXT,
         created_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT,
         updated_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT
       );
     `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS categories_user_id_idx ON categories (user_id);`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS categories_user_name_unique ON categories (user_id, name);`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS clients (
@@ -312,6 +352,13 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
-});
+runStartupMigrations()
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Servidor corriendo en puerto ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("No se pudieron ejecutar las migraciones iniciales:", error);
+    process.exit(1);
+  });
