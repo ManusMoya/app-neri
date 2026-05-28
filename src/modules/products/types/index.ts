@@ -21,4 +21,4 @@ export interface ProductListRecord extends ProductWithDetails {
   averageMargin: number;
 }
 
-export type ProductStockFilter = "all" | "out" | "low" | "to-buy";
+export type ProductStockFilter = "all" | "stock" | "to-buy";

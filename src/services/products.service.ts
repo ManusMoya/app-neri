@@ -10,7 +10,6 @@ import type {
 } from "@/modules/products/types";
 import {
   getProductMetrics,
-  getStockStatus,
 } from "@/modules/products/utils";
 import { requireCurrentUser } from "./auth.service";
 
@@ -174,9 +173,7 @@ function matchesStockFilter(product: ProductListRecord, filter: ProductStockFilt
     return true;
   }
 
-  const variants = product.variants.filter((variant) => variant.isActive);
-
-  return variants.length > 0 && variants.every((variant) => getStockStatus(variant) === "out");
+  return product.availableStock > 0;
 }
 
 async function getOrCreateCategory(name: string) {

@@ -5,7 +5,7 @@ import type {
   ProductStockFilter,
   ProductWithDetails,
 } from "@/modules/products/types";
-import { getProductMetrics, getStockStatus } from "@/modules/products/utils";
+import { getProductMetrics } from "@/modules/products/utils";
 import { createId } from "@/utils/ids";
 import { apiRequest, fromTimestamp } from "./api-client";
 import { createCategory, listCategories } from "./categories.api.service";
@@ -79,8 +79,7 @@ function matchesStockFilter(product: ProductListRecord, filter: ProductStockFilt
     return true;
   }
 
-  const variants = product.variants.filter((variant) => variant.isActive);
-  return variants.length > 0 && variants.every((variant) => getStockStatus(variant) === "out");
+  return product.availableStock > 0;
 }
 
 export async function listProducts(

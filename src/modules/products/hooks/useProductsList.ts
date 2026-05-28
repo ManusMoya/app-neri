@@ -69,12 +69,8 @@ export function useProductsList(providerId?: string) {
       return "Sin resultados";
     }
 
-    if (filter === "out") {
-      return "Sin productos sin stock";
-    }
-
-    if (filter === "low") {
-      return "Sin productos con stock bajo";
+    if (filter === "stock") {
+      return "Sin productos con stock";
     }
 
     if (filter === "to-buy") {

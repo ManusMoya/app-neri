@@ -20,8 +20,7 @@ import type { PendingPurchaseProviderGroup } from "@/services/pending-purchases.
 
 const filters: { label: string; value: ProductStockFilter }[] = [
   { label: "Todos", value: "all" },
-  { label: "Sin stock", value: "out" },
-  { label: "Stock bajo", value: "low" },
+  { label: "Stock", value: "stock" },
   { label: "A comprar", value: "to-buy" },
 ];
 
