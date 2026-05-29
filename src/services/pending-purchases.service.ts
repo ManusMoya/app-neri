@@ -1,5 +1,6 @@
 import type { ProductListRecord } from "@/modules/products/types";
 import { buildVariantLabel } from "@/modules/products/utils";
+import { compareText } from "@/utils/sort";
 
 import { listOrderItems } from "./order-items.api.service";
 import { listOrders } from "./orders.api.service";
@@ -109,11 +110,9 @@ export async function listPendingPurchasesByProvider(): Promise<PendingPurchaseP
       ...group,
       products: group.products
         .filter((product) => product.quantity > 0)
-        .sort((a, b) =>
-          a.productName.localeCompare(b.productName)
-            || a.variantLabel.localeCompare(b.variantLabel),
-        ),
+        .sort((a, b) => compareText(a.productName, b.productName)
+          || compareText(a.variantLabel, b.variantLabel)),
     }))
     .filter((group) => group.products.length > 0)
-    .sort((a, b) => a.providerName.localeCompare(b.providerName));
+    .sort((a, b) => compareText(a.providerName, b.providerName));
 }

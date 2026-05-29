@@ -3,6 +3,7 @@ import type { Provider } from "@/database/schema";
 import { buildWhatsappLink, normalizePhone } from "@/modules/clients/utils/phone";
 import type { ProviderFormValues } from "@/modules/providers/types";
 import { createId } from "@/utils/ids";
+import { sortByText } from "@/utils/sort";
 import { requireCurrentUser } from "./auth.service";
 
 export interface ProviderDetails {
@@ -93,7 +94,7 @@ export async function listProviders(searchTerm = "") {
       DELETED_PROVIDER_ID,
     );
 
-    return rows.map(mapProviderRow);
+    return sortByText(rows.map(mapProviderRow), (provider) => provider.name);
   }
 
   const pattern = `%${normalized}%`;
@@ -109,7 +110,7 @@ export async function listProviders(searchTerm = "") {
     pattern,
   );
 
-  return rows.map(mapProviderRow);
+  return sortByText(rows.map(mapProviderRow), (provider) => provider.name);
 }
 
 export async function getProviderDetails(id: string): Promise<ProviderDetails | null> {

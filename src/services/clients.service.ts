@@ -1,6 +1,7 @@
 import { getSQLiteConnection } from "@/database";
 import type { Client } from "@/database/schema";
 import { createId } from "@/utils/ids";
+import { sortByText } from "@/utils/sort";
 import { requireCurrentUser } from "./auth.service";
 
 import { buildWhatsappLink, normalizePhone } from "@/modules/clients/utils/phone";
@@ -74,7 +75,7 @@ export async function listClients(searchTerm = "") {
       user.id,
     );
 
-    return rows.map(mapClientRow);
+    return sortByText(rows.map(mapClientRow), (client) => client.name);
   }
 
   const pattern = `%${normalized}%`;
@@ -87,7 +88,7 @@ export async function listClients(searchTerm = "") {
     pattern,
   );
 
-  return rows.map(mapClientRow);
+  return sortByText(rows.map(mapClientRow), (client) => client.name);
 }
 
 export async function getClientDetails(id: string): Promise<ClientDetails | null> {

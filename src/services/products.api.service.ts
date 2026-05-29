@@ -7,6 +7,7 @@ import type {
 } from "@/modules/products/types";
 import { getProductMetrics } from "@/modules/products/utils";
 import { createId } from "@/utils/ids";
+import { compareText, sortByText } from "@/utils/sort";
 import { apiRequest, fromTimestamp } from "./api-client";
 import { createCategory, listCategories } from "./categories.api.service";
 import { listProviders } from "./providers.api.service";
@@ -81,7 +82,10 @@ async function hydrateProduct(row: ProductRow): Promise<ProductWithDetails> {
     ...product,
     category: category as Category,
     provider: provider as Provider,
-    variants: variants.filter((variant) => variant.productId === product.id && variant.isActive),
+    variants: sortByText(
+      variants.filter((variant) => variant.productId === product.id && variant.isActive),
+      (variant) => [variant.model, variant.color, variant.size].filter(Boolean).join(" "),
+    ),
   };
 }
 
@@ -112,7 +116,8 @@ export async function listProducts(
   return products
     .filter((product) => !providerId || product.providerId === providerId)
     .map(toProductListItem)
-    .filter((product) => matchesStockFilter(product, filter));
+    .filter((product) => matchesStockFilter(product, filter))
+    .sort((a, b) => compareText(a.name, b.name));
 }
 
 export async function getProductDetails(id: string) {

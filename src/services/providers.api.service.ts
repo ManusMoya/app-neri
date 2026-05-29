@@ -2,6 +2,7 @@ import type { Provider } from "@/database/schema";
 import type { ProviderFormValues } from "@/modules/providers/types";
 import { buildWhatsappLink, normalizePhone } from "@/modules/clients/utils/phone";
 import { createId } from "@/utils/ids";
+import { sortByText } from "@/utils/sort";
 import { apiRequest, fromTimestamp } from "./api-client";
 
 export interface ProviderDetails {
@@ -64,7 +65,7 @@ function toProviderPayload(values: ProviderFormValues) {
 export async function listProviders(searchTerm = "") {
   const query = searchTerm.trim() ? `?search=${encodeURIComponent(searchTerm.trim())}` : "";
   const rows = await apiRequest<ProviderRow[]>(`/providers${query}`);
-  return rows.map(mapProvider);
+  return sortByText(rows.map(mapProvider), (provider) => provider.name);
 }
 
 export async function getProviderDetails(id: string): Promise<ProviderDetails | null> {

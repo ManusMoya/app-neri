@@ -2,6 +2,7 @@ import type { Client } from "@/database/schema";
 import type { ClientFormValues } from "@/modules/clients/types";
 import { buildWhatsappLink, normalizePhone } from "@/modules/clients/utils/phone";
 import { createId } from "@/utils/ids";
+import { sortByText } from "@/utils/sort";
 import { apiRequest, fromTimestamp } from "./api-client";
 import { listOrders } from "./orders.api.service";
 
@@ -61,7 +62,7 @@ export async function listClients(searchTerm = "") {
     listOrders(),
   ]);
 
-  return rows.map((row) => {
+  return sortByText(rows.map((row) => {
     const client = mapClientRow(row);
     const debt = orders
       .filter((order) => order.clientId === client.id && order.status !== "cancelled")
@@ -71,7 +72,7 @@ export async function listClients(searchTerm = "") {
       ...client,
       debt,
     };
-  });
+  }), (client) => client.name);
 }
 
 export async function getClientDetails(id: string): Promise<ClientDetails | null> {

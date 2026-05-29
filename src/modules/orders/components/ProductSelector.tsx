@@ -5,6 +5,7 @@ import { Button, Card, CurrencyText, Input } from "@/components/ui";
 import { useProductsList } from "@/modules/products/hooks/useProductsList";
 import type { ProductListRecord } from "@/modules/products/types";
 import { useProvidersList } from "@/modules/providers/hooks/useProvidersList";
+import { compareText, sortByText } from "@/utils/sort";
 
 type VariantFilterKey = "model" | "color" | "size";
 
@@ -38,18 +39,18 @@ export function ProductSelector({
   const [openVariantFilter, setOpenVariantFilter] = useState<VariantFilterKey | null>(null);
 
   const selectableProducts = useMemo(
-    () => products
+    () => sortByText(products
       .map((product) => ({
         ...product,
-        variants: product.variants.filter((variant) => {
+        variants: sortByText(product.variants.filter((variant) => {
           if (!variant.isActive) {
             return false;
           }
 
           return stockOnly ? variant.stock - variant.reservedStock > 0 : true;
-        }),
+        }), (variant) => [variant.model, variant.color, variant.size].filter(Boolean).join(" ")),
       }))
-      .filter((product) => product.variants.length > 0),
+      .filter((product) => product.variants.length > 0), (product) => product.name),
     [products, stockOnly],
   );
 
@@ -107,16 +108,16 @@ export function ProductSelector({
     });
 
     return {
-      models: Array.from(models).sort(),
-      colors: Array.from(colors).sort(),
-      sizes: Array.from(sizes).sort((a, b) => Number(a) - Number(b) || a.localeCompare(b)),
+      models: Array.from(models).sort(compareText),
+      colors: Array.from(colors).sort(compareText),
+      sizes: Array.from(sizes).sort(compareText),
     };
   }, [selectedProduct]);
 
   const filteredVariants = useMemo(() => {
     const normalizedSearchTerm = variantSearchTerm.trim().toLowerCase();
 
-    return (selectedProduct?.variants ?? []).filter((variant) => {
+    return sortByText((selectedProduct?.variants ?? []).filter((variant) => {
       if (selectedModel && variant.model !== selectedModel) {
         return false;
       }
@@ -137,7 +138,7 @@ export function ProductSelector({
         variant.sku,
         variant.barcode,
       ].some((value) => value?.toLowerCase().includes(normalizedSearchTerm));
-    });
+    }), (variant) => [variant.model, variant.color, variant.size].filter(Boolean).join(" "));
   }, [selectedColor, selectedModel, selectedProduct, selectedSize, variantSearchTerm]);
 
   const hasVariantFilters = Boolean(

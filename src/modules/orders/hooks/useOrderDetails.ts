@@ -6,6 +6,7 @@ import { apiRequest } from "@/services/api-client";
 import { changeOrderStatus, OrderWorkflowStatus } from "@/services/orders.api.service";
 import { listOrderItems } from "@/services/order-items.api.service";
 import { listPayments, registerOrderPayment } from "@/services/payments.api.service";
+import { compareText } from "@/utils/sort";
 import type { OrderWithDetails } from "../types";
 
 type OrderDetailRow = {
@@ -33,7 +34,10 @@ async function getOrderDetails(id: string) {
     listPayments(),
   ]);
   const client = clients.find((item) => item.id === row.client_id);
-  const items = orderItems.filter((item) => item.orderId === id);
+  const items = orderItems
+    .filter((item) => item.orderId === id)
+    .sort((a, b) => compareText(a.productName, b.productName)
+      || compareText(a.variantLabel, b.variantLabel));
   const orderPayments = payments.filter((payment) => payment.orderId === id);
 
   if (!client) {

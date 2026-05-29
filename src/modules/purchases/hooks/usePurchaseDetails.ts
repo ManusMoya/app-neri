@@ -7,6 +7,7 @@ import { listProducts } from "@/services/products.api.service";
 import { listPurchaseItems } from "@/services/purchase-items.api.service";
 import { listProviders } from "@/services/providers.api.service";
 import { buildVariantLabel } from "@/modules/products/utils";
+import { compareText } from "@/utils/sort";
 
 import type { PurchaseItemWithProduct, PurchaseWithDetails } from "../types";
 
@@ -54,7 +55,9 @@ async function getPurchaseDetails(id: string) {
         variantLabel: variant ? buildVariantLabel(variant) : "Variante no encontrada",
         sku: variant?.sku ?? null,
       } satisfies PurchaseItemWithProduct;
-    });
+    })
+    .sort((a, b) => compareText(a.productName, b.productName)
+      || compareText(a.variantLabel, b.variantLabel));
 
   return {
     id: row.id,

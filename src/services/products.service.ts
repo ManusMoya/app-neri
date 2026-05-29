@@ -1,5 +1,6 @@
 import { getSQLiteConnection } from "@/database";
 import { createId } from "@/utils/ids";
+import { compareText, sortByText } from "@/utils/sort";
 
 import type {
   ProductFormValues,
@@ -111,7 +112,7 @@ function toProductWithDetails(rows: ProductDetailsRow[]): ProductWithDetails | n
       createdAt: toDate(first.provider_created_at),
       updatedAt: toDate(first.provider_updated_at),
     },
-    variants: rows.flatMap((row) => {
+    variants: sortByText(rows.flatMap((row) => {
       if (!row.variant_id) {
         return [];
       }
@@ -133,7 +134,7 @@ function toProductWithDetails(rows: ProductDetailsRow[]): ProductWithDetails | n
         createdAt: toDate(row.variant_created_at ?? first.created_at),
         updatedAt: toDate(row.variant_updated_at ?? first.updated_at),
       }];
-    }),
+    }), (variant) => [variant.model, variant.color, variant.size].filter(Boolean).join(" ")),
   };
 }
 
@@ -319,7 +320,8 @@ export async function listProducts(
       return matchesSearch(product, searchTerm);
     })
     .map(toProductListItem)
-    .filter((product) => matchesStockFilter(product, filter));
+    .filter((product) => matchesStockFilter(product, filter))
+    .sort((a, b) => compareText(a.name, b.name));
 }
 
 export async function getProductDetails(id: string) {
