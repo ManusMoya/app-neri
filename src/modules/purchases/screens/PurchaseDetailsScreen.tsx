@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Alert, Platform, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 
-import { Button, Header, LoadingSpinner, Screen, ScreenBody } from "@/components/ui";
+import { Badge, Button, Header, LoadingSpinner, Screen, ScreenBody } from "@/components/ui";
 import { Card } from "@/components/ui/Card";
 import { CurrencyText } from "@/components/ui/CurrencyText";
 import { removePurchase } from "@/services/purchases.api.service";
@@ -16,7 +16,14 @@ export function PurchaseDetailsScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) {
+    return (
+      <Screen scroll={false}>
+        <LoadingSpinner className="flex-1" />
+      </Screen>
+    );
+  }
+
   if (error || !purchase) {
     return (
       <Screen>
@@ -46,13 +53,9 @@ export function PurchaseDetailsScreen() {
       await removePurchase(purchase.id);
       router.replace("/purchases");
     } catch (deleteError) {
-      const message =
-        deleteError instanceof Error ? deleteError.message : "Intenta nuevamente.";
+      const message = deleteError instanceof Error ? deleteError.message : "Intenta nuevamente.";
       setDeleteError(message);
-      Alert.alert(
-        "No se pudo eliminar",
-        message,
-      );
+      Alert.alert("No se pudo eliminar", message);
     } finally {
       setIsDeleting(false);
     }
@@ -70,19 +73,18 @@ export function PurchaseDetailsScreen() {
       return;
     }
 
-    Alert.alert(
-      "Eliminar compra",
-      message,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: () => void deletePurchase(),
-        },
-      ],
-    );
+    Alert.alert("Eliminar compra", message, [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: () => void deletePurchase(),
+      },
+    ]);
   };
+
+  const purchasedAt = new Date(purchase.purchasedAt).toLocaleDateString("es-AR");
+  const hasPaymentPending = purchase.balanceDue > 0;
 
   return (
     <Screen>
@@ -111,77 +113,123 @@ export function PurchaseDetailsScreen() {
           <Text className="text-sm font-medium text-danger">{deleteError}</Text>
         ) : null}
 
-        <ScrollView className="flex-1">
-          <Card className="p-4 mb-4">
-            <Text className="text-sm text-slate-500 uppercase font-bold mb-1">Proveedor</Text>
-            <Text className="text-lg font-bold text-slate-900">{purchase.provider.name}</Text>
-            <Text className="text-slate-500">{new Date(purchase.purchasedAt).toLocaleDateString()}</Text>
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          <Card className="mb-4 gap-3">
+            <View className="flex-row items-start justify-between gap-3">
+              <View className="min-w-0 flex-1 gap-1">
+                <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                  Proveedor
+                </Text>
+                <Text className="text-lg font-bold text-foreground">{purchase.provider.name}</Text>
+                <Text className="text-sm text-muted-foreground">{purchasedAt}</Text>
+              </View>
+              <Badge label="Recibida" tone="success" />
+            </View>
+            {purchase.reference ? (
+              <View className="rounded-md bg-background px-3 py-2">
+                <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                  Referencia
+                </Text>
+                <Text className="text-sm font-semibold text-foreground">{purchase.reference}</Text>
+              </View>
+            ) : null}
           </Card>
 
-          <Card className="p-4 mb-4">
-            <Text className="text-sm text-slate-500 uppercase font-bold mb-3">Productos Recibidos</Text>
+          <View className="mb-4 flex-row gap-3">
+            <Card className="flex-1 gap-1">
+              <Text className="text-xs font-semibold uppercase text-muted-foreground">Total</Text>
+              <CurrencyText amount={purchase.totalAmount} className="text-xl font-bold" />
+            </Card>
+            <Card className="flex-1 gap-1">
+              <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                {hasPaymentPending ? "Pendiente" : "Pagado"}
+              </Text>
+              <CurrencyText
+                amount={hasPaymentPending ? purchase.balanceDue : purchase.paidAmount}
+                className={`text-xl font-bold ${hasPaymentPending ? "text-danger" : "text-success"}`}
+              />
+            </Card>
+          </View>
+
+          <Card className="mb-4 gap-3">
+            <Text className="text-sm font-bold uppercase text-muted-foreground">
+              Productos recibidos
+            </Text>
             {purchase.items.map((item) => (
-              <View key={item.id} className="gap-3 border-b border-slate-100 py-3 last:border-b-0">
+              <View key={item.id} className="gap-3 border-b border-border py-3 last:border-b-0">
                 <View className="flex-row items-start justify-between gap-3">
                   <View className="min-w-0 flex-1">
-                    <Text className="text-base font-bold text-slate-900" numberOfLines={2}>
+                    <Text className="text-base font-bold text-foreground" numberOfLines={2}>
                       {item.productName}
                     </Text>
-                    <Text className="text-xs text-slate-500">
+                    <Text className="text-xs text-muted-foreground">
                       {item.variantLabel}
-                      {item.sku ? ` · SKU ${item.sku}` : ""}
+                      {item.sku ? ` - SKU ${item.sku}` : ""}
                     </Text>
                   </View>
-                  <CurrencyText amount={item.lineTotal} className="font-bold text-slate-900" />
+                  <View className="items-end gap-1">
+                    <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                      x{item.quantity}
+                    </Text>
+                    <CurrencyText amount={item.lineTotal} className="font-bold" />
+                  </View>
                 </View>
 
-                <View className="gap-1 rounded-md bg-slate-50 p-3">
+                <View className="gap-2 rounded-md bg-background p-3">
                   <View className="flex-row justify-between">
-                    <Text className="text-xs text-slate-500">Cantidad</Text>
-                    <Text className="text-xs font-semibold text-slate-700">{item.quantity}</Text>
+                    <Text className="text-xs text-muted-foreground">Costo unitario base</Text>
+                    <CurrencyText amount={item.baseCost} className="text-xs font-semibold" />
                   </View>
                   <View className="flex-row justify-between">
-                    <Text className="text-xs text-slate-500">Costo unitario base</Text>
-                    <CurrencyText amount={item.baseCost} className="text-xs font-semibold text-slate-700" />
+                    <Text className="text-xs text-muted-foreground">Envio asignado</Text>
+                    <CurrencyText amount={item.shippingCost} className="text-xs font-semibold" />
                   </View>
                   <View className="flex-row justify-between">
-                    <Text className="text-xs text-slate-500">Flete asignado</Text>
-                    <CurrencyText amount={item.shippingCost} className="text-xs font-semibold text-slate-700" />
-                  </View>
-                  <View className="flex-row justify-between">
-                    <Text className="text-xs text-slate-500">Costo real unitario</Text>
-                    <CurrencyText amount={item.realCost} className="text-xs font-semibold text-slate-700" />
+                    <Text className="text-xs text-muted-foreground">Costo real unitario</Text>
+                    <CurrencyText amount={item.realCost} className="text-xs font-semibold" />
                   </View>
                 </View>
               </View>
             ))}
+            {purchase.items.length === 0 ? (
+              <Text className="text-sm text-muted-foreground">
+                Esta compra no tiene productos asociados.
+              </Text>
+            ) : null}
             <View className="mt-4 gap-2">
               <View className="flex-row justify-between">
-                <Text className="text-slate-600">Subtotal</Text>
+                <Text className="text-muted-foreground">Subtotal</Text>
                 <CurrencyText amount={purchase.subtotalAmount} />
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-slate-600">Envío</Text>
+                <Text className="text-muted-foreground">Envio</Text>
                 <CurrencyText amount={purchase.shippingAmount} />
               </View>
-              <View className="flex-row justify-between border-t border-slate-100 pt-2">
-                <Text className="text-lg font-bold text-slate-900">Total</Text>
-                <CurrencyText amount={purchase.totalAmount} className="text-lg font-bold text-slate-900" />
+              <View className="flex-row justify-between border-t border-border pt-2">
+                <Text className="text-lg font-bold text-foreground">Total</Text>
+                <CurrencyText amount={purchase.totalAmount} className="text-lg font-bold" />
               </View>
             </View>
           </Card>
 
-          <Card className="p-4 mb-8">
-            <Text className="text-sm text-slate-500 uppercase font-bold mb-3">Pagos</Text>
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-slate-600">Monto Pagado</Text>
-              <CurrencyText amount={purchase.paidAmount} className="text-success-600 font-bold" />
+          <Card className="mb-4 gap-3">
+            <Text className="text-sm font-bold uppercase text-muted-foreground">Pagos</Text>
+            <View className="flex-row justify-between">
+              <Text className="text-muted-foreground">Monto pagado</Text>
+              <CurrencyText amount={purchase.paidAmount} className="font-bold text-success" />
             </View>
             <View className="flex-row justify-between">
-              <Text className="text-slate-600">Saldo Pendiente</Text>
-              <CurrencyText amount={purchase.balanceDue} className="text-error-600 font-bold" />
+              <Text className="text-muted-foreground">Saldo pendiente</Text>
+              <CurrencyText amount={purchase.balanceDue} className="font-bold text-danger" />
             </View>
           </Card>
+
+          {purchase.notes ? (
+            <Card className="mb-8 gap-2">
+              <Text className="text-sm font-bold uppercase text-muted-foreground">Notas</Text>
+              <Text className="text-sm leading-5 text-foreground">{purchase.notes}</Text>
+            </Card>
+          ) : null}
         </ScrollView>
       </ScreenBody>
     </Screen>

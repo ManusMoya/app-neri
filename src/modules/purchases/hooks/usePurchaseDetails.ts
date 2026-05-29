@@ -2,7 +2,11 @@ import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
 
 import { apiRequest } from "@/services/api-client";
+import { listProductVariants } from "@/services/product-variants.api.service";
+import { listProducts } from "@/services/products.api.service";
+import { listPurchaseItems } from "@/services/purchase-items.api.service";
 import { listProviders } from "@/services/providers.api.service";
+import { buildVariantLabel } from "@/modules/products/utils";
 
 import type { PurchaseItemWithProduct, PurchaseWithDetails } from "../types";
 
@@ -23,15 +27,34 @@ type PurchaseDetailRow = {
 };
 
 async function getPurchaseDetails(id: string) {
-  const [row, providers] = await Promise.all([
+  const [row, providers, purchaseItems, variants, products] = await Promise.all([
     apiRequest<PurchaseDetailRow>(`/purchases/${encodeURIComponent(id)}`),
     listProviders(),
+    listPurchaseItems(),
+    listProductVariants(),
+    listProducts(),
   ]);
   const provider = providers.find((item) => item.id === row.provider_id);
 
   if (!provider) {
     throw new Error("No se pudo cargar el proveedor de la compra.");
   }
+
+  const items = purchaseItems
+    .filter((item) => item.purchaseId === row.id)
+    .map((item) => {
+      const variant = variants.find((current) => current.id === item.productVariantId);
+      const product = variant
+        ? products.find((current) => current.id === variant.productId)
+        : null;
+
+      return {
+        ...item,
+        productName: product?.name ?? "Producto no encontrado",
+        variantLabel: variant ? buildVariantLabel(variant) : "Variante no encontrada",
+        sku: variant?.sku ?? null,
+      } satisfies PurchaseItemWithProduct;
+    });
 
   return {
     id: row.id,
@@ -48,7 +71,7 @@ async function getPurchaseDetails(id: string) {
     createdAt: new Date(Number(row.created_at)),
     updatedAt: new Date(Number(row.updated_at)),
     provider,
-    items: [] as PurchaseItemWithProduct[],
+    items,
   } satisfies PurchaseWithDetails;
 }
 
