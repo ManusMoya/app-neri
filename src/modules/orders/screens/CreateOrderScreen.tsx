@@ -1,14 +1,20 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { useRouter, type Href } from "expo-router";
+import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 
 import { Button, Card, CurrencyText, Header, Input, Screen, ScreenBody } from "@/components/ui";
 
 import { ClientSelector, ProductSelector } from "../components";
 import { useOrderForm } from "../hooks/useOrderForm";
 
+function getIdParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 export function CreateOrderScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ clientId?: string | string[] }>();
+  const initialClientId = getIdParam(params.clientId);
   const {
     setClientId,
     selectedClient,
@@ -28,10 +34,18 @@ export function CreateOrderScreen() {
     isSubmitting,
     error,
     handleSubmit,
-  } = useOrderForm();
+  } = useOrderForm(initialClientId);
 
   const [clientSelectorVisible, setClientSelectorVisible] = useState(false);
   const [productSelectorVisible, setProductSelectorVisible] = useState(false);
+
+  useEffect(() => {
+    if (!initialClientId || selectedClient) {
+      return;
+    }
+
+    void setClientId(initialClientId);
+  }, [initialClientId, selectedClient, setClientId]);
 
   return (
     <Screen>
@@ -188,7 +202,7 @@ export function CreateOrderScreen() {
       <ClientSelector
         visible={clientSelectorVisible}
         onClose={() => setClientSelectorVisible(false)}
-        onSelect={(client) => setClientId(client.id, client)}
+        onSelect={(client) => void setClientId(client.id, client)}
       />
       <ProductSelector
         visible={productSelectorVisible}

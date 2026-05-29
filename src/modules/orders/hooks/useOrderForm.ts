@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useRouter, type Href } from "expo-router";
 
+import { getClientDetails } from "@/services/clients.api.service";
 import { createOrder, CreateOrderInput, CreateOrderItemInput } from "@/services/orders.api.service";
 import { Client } from "@/database/schema";
 
-export function useOrderForm() {
+export function useOrderForm(initialClientId?: string) {
   const router = useRouter();
-  const [clientId, setClientId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string | null>(initialClientId ?? null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [items, setItems] = useState<(CreateOrderItemInput & { variant: any })[]>([]);
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -103,9 +104,20 @@ export function useOrderForm() {
 
   return {
     clientId,
-    setClientId: (id: string, client: Client) => {
+    setClientId: async (id: string, client?: Client) => {
       setClientId(id);
-      setSelectedClient(client);
+      if (client) {
+        setSelectedClient(client);
+        return;
+      }
+
+      const details = await getClientDetails(id);
+      if (!details) {
+        setError("No se pudo cargar el cliente.");
+        return;
+      }
+
+      setSelectedClient(details.client);
     },
     selectedClient,
     items,

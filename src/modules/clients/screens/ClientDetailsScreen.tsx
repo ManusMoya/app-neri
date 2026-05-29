@@ -71,6 +71,16 @@ export function ClientDetailsScreen() {
               variant="outline"
               onPress={() => router.push(`/clients/${client.id}/edit` as Href)}
             />
+            <Button
+              title="Nuevo pedido"
+              size="sm"
+              onPress={() =>
+                router.push({
+                  pathname: "/orders/create",
+                  params: { clientId: client.id },
+                } as Href)
+              }
+            />
           </View>
         }
       />
