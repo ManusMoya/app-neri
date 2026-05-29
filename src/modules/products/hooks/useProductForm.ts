@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, type Href } from "expo-router";
 import { useForm } from "react-hook-form";
@@ -44,6 +44,7 @@ function normalizeVariants(values: ProductFormValues): ProductFormValues {
 export function useProductForm({ mode, product }: UseProductFormOptions) {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const loadedProductId = useRef<string | null>(null);
 
   const defaultValues = useMemo<ProductFormValues>(
     () => ({
@@ -67,8 +68,17 @@ export function useProductForm({ mode, product }: UseProductFormOptions) {
   });
 
   useEffect(() => {
+    if (mode === "create") {
+      return;
+    }
+
+    if (!product || loadedProductId.current === product.id) {
+      return;
+    }
+
+    loadedProductId.current = product.id;
     form.reset(defaultValues);
-  }, [defaultValues, form]);
+  }, [defaultValues, form, mode, product]);
 
   const submit = form.handleSubmit(async (values) => {
     setSubmitError(null);

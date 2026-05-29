@@ -116,7 +116,8 @@ export function ProductForm({ formState, providers, submitLabel }: ProductFormPr
   const [rangeCost, setRangeCost] = useState(0);
   const [rangeSale, setRangeSale] = useState(0);
   const [rangeError, setRangeError] = useState<string | null>(null);
-  const [groupErrors, setGroupErrors] = useState<Record<number, string>>({});
+  const [groupErrors, setGroupErrors] = useState<Record<string, string>>({});
+  const [sizeDrafts, setSizeDrafts] = useState<Record<string, string>>({});
   const variants = form.watch("variants");
   const variantGroups = useMemo(() => groupVariants(variants), [variants]);
 
@@ -147,8 +148,8 @@ export function ProductForm({ formState, providers, submitLabel }: ProductFormPr
     form.setValue("variants", nextVariants, { shouldDirty: true, shouldValidate: true });
   };
 
-  const updateGroupSizes = (groupIndex: number, indices: number[], value: string) => {
-    setGroupErrors((current) => ({ ...current, [groupIndex]: "" }));
+  const updateGroupSizes = (groupKey: string, indices: number[], value: string) => {
+    setGroupErrors((current) => ({ ...current, [groupKey]: "" }));
 
     try {
       const sizes = parseSizesInput(value);
@@ -160,10 +161,15 @@ export function ProductForm({ formState, providers, submitLabel }: ProductFormPr
         : [{ ...base, size: "" }];
 
       replace([...remaining, ...replacement]);
+      setSizeDrafts((current) => {
+        const next = { ...current };
+        delete next[groupKey];
+        return next;
+      });
     } catch (error) {
       setGroupErrors((current) => ({
         ...current,
-        [groupIndex]: error instanceof Error ? error.message : "No se pudo actualizar el rango.",
+        [groupKey]: error instanceof Error ? error.message : "No se pudo actualizar el rango.",
       }));
     }
   };
@@ -288,8 +294,12 @@ export function ProductForm({ formState, providers, submitLabel }: ProductFormPr
           <Button title="Generar talles" variant="secondary" onPress={handleAddRange} />
         </Card>
 
-        {variantGroups.map((group, index) => (
-          <Card key={`${group.color}-${group.model}-${group.costPrice}-${group.salePrice}-${index}`} className="gap-4">
+        {variantGroups.map((group, index) => {
+          const groupKey = `variant-group-${group.indices.join("-")}`;
+          const sizeValue = sizeDrafts[groupKey] ?? formatSizes(group.sizes);
+
+          return (
+          <Card key={groupKey} className="gap-4">
             <View className="flex-row items-center justify-between gap-3">
               <Text className="text-base font-bold text-foreground">
                 Grupo {index + 1}
@@ -307,9 +317,12 @@ export function ProductForm({ formState, providers, submitLabel }: ProductFormPr
               <Input
                 label="Talles"
                 placeholder="Ej. 38-42 o 38, 39, 40"
-                value={formatSizes(group.sizes)}
-                onChangeText={(value) => updateGroupSizes(index, group.indices, value)}
-                error={groupErrors[index] || undefined}
+                value={sizeValue}
+                onBlur={() => updateGroupSizes(groupKey, group.indices, sizeValue)}
+                onChangeText={(value) =>
+                  setSizeDrafts((current) => ({ ...current, [groupKey]: value }))
+                }
+                error={groupErrors[groupKey] || undefined}
               />
               <View className="flex-row gap-3">
                 <Input
@@ -346,7 +359,8 @@ export function ProductForm({ formState, providers, submitLabel }: ProductFormPr
               </View>
             </View>
           </Card>
-        ))}
+          );
+        })}
 
         {getErrorMessage(form.formState.errors.variants) ? (
           <Text className="text-sm font-medium text-danger">

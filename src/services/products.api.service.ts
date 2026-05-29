@@ -10,7 +10,11 @@ import { createId } from "@/utils/ids";
 import { apiRequest, fromTimestamp } from "./api-client";
 import { createCategory, listCategories } from "./categories.api.service";
 import { listProviders } from "./providers.api.service";
-import { listProductVariants } from "./product-variants.api.service";
+import {
+  createProductVariant,
+  listProductVariants,
+  updateProductVariant,
+} from "./product-variants.api.service";
 
 type ProductRow = {
   id: string;
@@ -43,6 +47,20 @@ function cleanText(value?: string | null) {
 
 function normalizeName(value: string) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function toVariantApiInput(productId: string, variant: ProductFormValues["variants"][number]) {
+  return {
+    product_id: productId,
+    color: cleanText(variant.color),
+    size: cleanText(variant.size),
+    model: cleanText(variant.model),
+    sku: null,
+    barcode: null,
+    cost_price: variant.costPrice,
+    sale_price: variant.salePrice,
+    is_active: true,
+  };
 }
 
 async function hydrateProduct(row: ProductRow): Promise<ProductWithDetails> {
@@ -122,21 +140,7 @@ export async function createProductFromForm(values: ProductFormValues) {
   });
 
   for (const variant of values.variants) {
-    await apiRequest("/product-variants", {
-      method: "POST",
-      body: JSON.stringify({
-        id: createId("variant"),
-        product_id: productId,
-        color: cleanText(variant.color),
-        size: cleanText(variant.size),
-        model: cleanText(variant.model),
-        sku: null,
-        barcode: null,
-        cost_price: variant.costPrice,
-        sale_price: variant.salePrice,
-        is_active: true,
-      }),
-    });
+    await createProductVariant(toVariantApiInput(productId, variant));
   }
 
   return toProductListItem(await hydrateProduct(row));
@@ -150,6 +154,26 @@ export async function updateProductFromForm(id: string, values: ProductFormValue
       name: normalizeName(values.name),
     }),
   });
+
+  const existingVariants = await listProductVariants();
+  const productVariants = existingVariants.filter((variant) => variant.productId === id);
+  const submittedIds = new Set(values.variants.map((variant) => variant.id).filter(Boolean));
+
+  await Promise.all(
+    productVariants
+      .filter((variant) => !submittedIds.has(variant.id) && variant.isActive)
+      .map((variant) => updateProductVariant(variant.id, { is_active: false })),
+  );
+
+  for (const variant of values.variants) {
+    const payload = toVariantApiInput(id, variant);
+
+    if (variant.id) {
+      await updateProductVariant(variant.id, payload);
+    } else {
+      await createProductVariant(payload);
+    }
+  }
 
   return toProductListItem(await hydrateProduct(row));
 }
