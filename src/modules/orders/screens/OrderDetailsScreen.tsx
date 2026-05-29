@@ -94,9 +94,9 @@ export function OrderDetailsScreen() {
 
   const parsePaymentAmount = () => Number(paymentAmount.replace(/[^\d]/g, ""));
 
-  const setInstallmentAmount = (installments: number) => {
-    setPaymentAmount(Math.ceil(order.balanceDue / installments).toString());
-    setPaymentNotes(`${installments} cuota(s)`);
+  const setFullBalancePayment = () => {
+    setPaymentAmount(order.balanceDue.toString());
+    setPaymentNotes("Pago final");
     setPaymentError(null);
   };
 
@@ -274,7 +274,18 @@ export function OrderDetailsScreen() {
 
             {order.balanceDue > 0 && (
               <Card className="p-4 mt-2 gap-3">
-                <Text className="font-bold text-slate-900">Registrar pago o cuota</Text>
+                <View className="flex-row items-start justify-between gap-3">
+                  <View className="min-w-0 flex-1">
+                    <Text className="font-bold text-slate-900">Registrar pago</Text>
+                    <Text className="text-sm text-slate-500">
+                      Carga una cuota parcial o liquida el saldo pendiente.
+                    </Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className="text-xs font-bold uppercase text-slate-500">Saldo</Text>
+                    <CurrencyText amount={order.balanceDue} className="font-bold text-error-600" />
+                  </View>
+                </View>
                 <Input
                   label="Monto que pago el cliente"
                   value={paymentAmount}
@@ -293,18 +304,6 @@ export function OrderDetailsScreen() {
                   placeholder="Ej: cuota 1 de 3"
                 />
                 <View className="flex-row gap-2">
-                  {[2, 3, 4].map((installments) => (
-                    <Button
-                      key={installments}
-                      title={`${installments} cuotas`}
-                      size="sm"
-                      variant="outline"
-                      onPress={() => setInstallmentAmount(installments)}
-                      className="flex-1"
-                    />
-                  ))}
-                </View>
-                <View className="flex-row gap-2">
                   <Button
                     title="Registrar cuota"
                     onPress={registerPayment}
@@ -313,11 +312,7 @@ export function OrderDetailsScreen() {
                   />
                   <Button
                     title="Pagar saldo"
-                    onPress={() => {
-                      setPaymentAmount(order.balanceDue.toString());
-                      setPaymentNotes("Pago final");
-                      setPaymentError(null);
-                    }}
+                    onPress={setFullBalancePayment}
                     loading={isActionLoading}
                     variant="outline"
                     className="flex-1"
