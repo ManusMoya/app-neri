@@ -4,12 +4,14 @@ import { useRouter, type Href } from "expo-router";
 
 import { Button, Header, LoadingSpinner, Screen, ScreenBody } from "@/components/ui";
 import { logoutApiUser as logoutUser } from "@/services/auth.api.service";
+import { getCurrentUser } from "@/services/auth.service";
 
 import { MetricCard } from "../components/MetricCard";
 import { useDashboard } from "../hooks/useDashboard";
 
 export function DashboardScreen() {
   const router = useRouter();
+  const currentUser = getCurrentUser();
   const { metrics, isLoading, isRefreshing, error, refresh } = useDashboard();
 
   if (isLoading && !isRefreshing) {
@@ -20,7 +22,7 @@ export function DashboardScreen() {
     <Screen>
       <Header
         title="Dashboard"
-        subtitle="Balance general, ingresos, egresos y deuda."
+        subtitle={`Usuario activo: ${currentUser?.username ?? "Sin usuario"} · Balance general, ingresos, egresos y deuda.`}
         rightSlot={
           <Button
             title="Salir"
