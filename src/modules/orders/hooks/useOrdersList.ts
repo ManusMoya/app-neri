@@ -3,7 +3,7 @@ import { useFocusEffect } from "expo-router";
 
 import { listClients } from "@/services/clients.api.service";
 import { listOrders } from "@/services/orders.api.service";
-import { compareText } from "@/utils/sort";
+import { compareDatesDesc } from "@/utils/sort";
 
 import type { OrderListRecord } from "../types";
 
@@ -21,7 +21,7 @@ async function listOrdersWithClient() {
       ...order,
       client,
     } satisfies OrderListRecord;
-  }).sort((a, b) => compareText(a.client.name, b.client.name));
+  }).sort((a, b) => compareDatesDesc(a.orderedAt, b.orderedAt));
 }
 
 export function useOrdersList() {

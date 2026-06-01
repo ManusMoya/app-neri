@@ -3,7 +3,7 @@ import { useFocusEffect } from "expo-router";
 
 import { listProviders } from "@/services/providers.api.service";
 import { listPurchases } from "@/services/purchases.api.service";
-import { compareText } from "@/utils/sort";
+import { compareDatesDesc } from "@/utils/sort";
 
 import type { PurchaseListRecord } from "../types";
 
@@ -21,7 +21,7 @@ async function listPurchasesWithProvider() {
       ...purchase,
       provider,
     } satisfies PurchaseListRecord;
-  }).sort((a, b) => compareText(a.provider.name, b.provider.name));
+  }).sort((a, b) => compareDatesDesc(a.purchasedAt, b.purchasedAt));
 }
 
 export function usePurchasesList() {
