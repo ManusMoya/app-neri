@@ -66,6 +66,8 @@ function groupVariants(variants: ProductVariant[]) {
 
 function VariantSummaryCard({ variants, title }: { title: string; variants: ProductVariant[] }) {
   const firstVariant = variants[0];
+  const stockTotal = variants.reduce((sum, variant) => sum + variant.stock, 0);
+  const reservedStock = variants.reduce((sum, variant) => sum + variant.reservedStock, 0);
   const availableStock = variants.reduce((sum, variant) => sum + getAvailableStock(variant), 0);
   const status = getStockStatus({
     stock: availableStock,
@@ -81,6 +83,12 @@ function VariantSummaryCard({ variants, title }: { title: string; variants: Prod
             {title}
           </Text>
           <View className="flex-row flex-wrap gap-x-3 gap-y-1">
+            <Text className="text-xs font-semibold text-muted-foreground">
+              Total {stockTotal}
+            </Text>
+            <Text className="text-xs font-semibold text-muted-foreground">
+              Reserv. {reservedStock}
+            </Text>
             <Text className="text-xs font-semibold text-muted-foreground">
               Disp. {availableStock}
             </Text>
@@ -98,7 +106,7 @@ function VariantSummaryCard({ variants, title }: { title: string; variants: Prod
 
       <View className="flex-row flex-wrap gap-2">
         {variants.map((variant) => {
-          const variantStock = getAvailableStock(variant);
+          const variantAvailableStock = getAvailableStock(variant);
           const label = variant.size?.trim()
             ? `Talle ${variant.size.trim()}`
             : buildVariantLabel(variant);
@@ -109,7 +117,9 @@ function VariantSummaryCard({ variants, title }: { title: string; variants: Prod
               className="rounded-md border border-border bg-background px-3 py-2"
             >
               <Text className="text-xs font-semibold text-foreground">{label}</Text>
-              <Text className="text-xs text-muted-foreground">Stock {variantStock}</Text>
+              <Text className="text-xs text-muted-foreground">Total {variant.stock}</Text>
+              <Text className="text-xs text-muted-foreground">Reserv. {variant.reservedStock}</Text>
+              <Text className="text-xs text-muted-foreground">Disp. {variantAvailableStock}</Text>
             </View>
           );
         })}
@@ -244,6 +254,8 @@ export function ProductDetailsScreen() {
       <ScreenBody>
         <ProductMetricsGrid
           stockTotal={visibleMetrics.stockTotal}
+          reservedStock={visibleMetrics.reservedStock}
+          availableStock={visibleMetrics.availableStock}
           inventoryValue={visibleMetrics.inventoryValue}
           averageMargin={visibleMetrics.averageMargin}
         />
