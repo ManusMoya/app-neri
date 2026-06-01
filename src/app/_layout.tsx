@@ -6,22 +6,27 @@ import { Stack } from "expo-router";
 
 import { migrateDatabase } from "@/database";
 import { LoadingSpinner } from "@/components/ui";
+import { restoreStoredSession } from "@/services/auth.api.service";
 
 export default function RootLayout() {
-  const [databaseReady, setDatabaseReady] = useState(Platform.OS === "web");
+  const [appReady, setAppReady] = useState(false);
   const [databaseError, setDatabaseError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (Platform.OS === "web") {
-      return;
-    }
-
     let mounted = true;
 
-    migrateDatabase()
+    const prepareApp = async () => {
+      if (Platform.OS !== "web") {
+        await migrateDatabase();
+      }
+
+      await restoreStoredSession();
+    };
+
+    prepareApp()
       .then(() => {
         if (mounted) {
-          setDatabaseReady(true);
+          setAppReady(true);
         }
       })
       .catch((error: unknown) => {
@@ -43,7 +48,7 @@ export default function RootLayout() {
     throw databaseError;
   }
 
-  if (!databaseReady) {
+  if (!appReady) {
     return <LoadingSpinner className="flex-1 bg-background" />;
   }
 

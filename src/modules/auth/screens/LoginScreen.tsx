@@ -56,9 +56,9 @@ export function LoginScreen() {
     setIsSubmitting(true);
     try {
       if (mode === "create") {
-        await register(username, password);
+        await register(username, password, { remember: rememberSession });
       } else {
-        await login(username, password);
+        await login(username, password, { remember: rememberSession });
       }
 
       router.replace("/dashboard" as Href);

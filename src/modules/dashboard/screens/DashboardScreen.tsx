@@ -26,8 +26,8 @@ export function DashboardScreen() {
             title="Salir"
             size="sm"
             variant="outline"
-            onPress={() => {
-              logoutUser();
+            onPress={async () => {
+              await logoutUser();
               router.replace("/" as Href);
             }}
           />
